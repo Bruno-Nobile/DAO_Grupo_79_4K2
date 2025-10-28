@@ -1,0 +1,16 @@
+# Dependencias del Sistema de Alquiler de Vehículos
+# Python 3.7+
+
+# Aplicación web Flask
+Flask>=2.3.0
+
+# Interfaz gráfica (incluida en Python estándar)
+# tkinter
+# ttk
+
+# Visualización de datos (opcional, para gráficos)
+matplotlib>=3.5.0
+
+# Base de datos (incluida en Python estándar)
+# sqlite3
+

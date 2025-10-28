@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Alquiler{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>Nuevo Alquiler</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Cliente *</label>
+                <select class="form-select" name="id_cliente" required>
+                    <option value="">Seleccione un cliente</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id_cliente }}">{{ cliente.apellido }}, {{ cliente.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Vehículo *</label>
+                <select class="form-select" name="id_vehiculo" required>
+                    <option value="">Seleccione un vehículo</option>
+                    {% for vehiculo in vehiculos %}
+                    <option value="{{ vehiculo.id_vehiculo }}">{{ vehiculo.patente }} - {{ vehiculo.marca }} {{ vehiculo.modelo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Empleado</label>
+                <select class="form-select" name="id_empleado">
+                    <option value="">Ninguno</option>
+                    {% for empleado in empleados %}
+                    <option value="{{ empleado.id_empleado }}">{{ empleado.apellido }}, {{ empleado.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Fecha Inicio *</label>
+                <input type="date" class="form-control" name="fecha_inicio" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Fecha Fin *</label>
+                <input type="date" class="form-control" name="fecha_fin" required>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('alquileres') }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Registrar Alquiler</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

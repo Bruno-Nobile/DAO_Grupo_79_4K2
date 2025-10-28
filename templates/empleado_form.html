@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{{ titulo }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Nombre *</label>
+                <input type="text" class="form-control" name="nombre" value="{{ empleado.nombre if empleado else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Apellido *</label>
+                <input type="text" class="form-control" name="apellido" value="{{ empleado.apellido if empleado else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">DNI</label>
+                <input type="text" class="form-control" name="dni" value="{{ empleado.dni if empleado else '' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Cargo</label>
+                <input type="text" class="form-control" name="cargo" value="{{ empleado.cargo if empleado else '' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="text" class="form-control" name="telefono" value="{{ empleado.telefono if empleado else '' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" value="{{ empleado.email if empleado else '' }}">
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('empleados') }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

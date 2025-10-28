@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-graph-up"></i> Reportes</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Vehículos Más Alquilados</h5>
+        <div id="vehiculos-chart"></div>
+    </div>
+</div>
+
+<script>
+    fetch('/api/reportes/vehiculos-mas-alquilados')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('vehiculos-chart');
+            let html = '<table class="table"><thead><tr><th>Vehículo</th><th>Cantidad de Alquileres</th></tr></thead><tbody>';
+            data.forEach(item => {
+                html += `<tr><td>${item.desc}</td><td>${item.veces}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        });
+</script>
+{% endblock %}
+
