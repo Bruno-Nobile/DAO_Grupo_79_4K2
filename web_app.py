@@ -638,6 +638,67 @@ def api_exportar_vehiculos_excel():
         return redirect(url_for('reportes'))
 
 
+@app.route('/api/reportes/exportar-alquileres-csv')
+def api_exportar_alquileres_csv():
+    """
+    API: Exportar lista de alquileres a CSV
+    Programación Estructurada - Función bien organizada
+    """
+    import csv
+    import io
+    
+    conn = get_connection()
+    c = conn.cursor()
+    
+    try:
+        c.execute("""SELECT a.id_alquiler, a.fecha_inicio, a.fecha_fin, a.costo_total,
+                            c.nombre||' '||c.apellido as cliente, v.patente as vehiculo
+                     FROM alquiler a
+                     JOIN cliente c ON a.id_cliente=c.id_cliente
+                     JOIN vehiculo v ON a.id_vehiculo=v.id_vehiculo
+                     ORDER BY a.fecha_inicio DESC""")
+        
+        rows = c.fetchall()
+        
+        # Crear buffer en memoria para el CSV
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
+        
+        # Escribir encabezados
+        writer.writerow(["id_alquiler", "fecha_inicio", "fecha_fin", "costo_total", "cliente", "vehiculo"])
+        
+        # Escribir datos
+        for row in rows:
+            writer.writerow([
+                row["id_alquiler"],
+                row["fecha_inicio"],
+                row["fecha_fin"],
+                row["costo_total"],
+                row["cliente"],
+                row["vehiculo"]
+            ])
+        
+        # Convertir a bytes para la respuesta
+        csv_bytes = io.BytesIO()
+        csv_bytes.write(csv_buffer.getvalue().encode('utf-8-sig'))  # utf-8-sig para compatibilidad con Excel
+        csv_bytes.seek(0)
+        
+        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'alquileres_export_{fecha}.csv'
+        
+        return send_file(
+            csv_bytes,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        flash(f'Error al generar el archivo CSV: {str(e)}', 'error')
+        return redirect(url_for('reportes'))
+    finally:
+        conn.close()
+
+
 if __name__ == '__main__':
     init_db()
     seed_sample_data()

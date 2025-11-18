@@ -48,6 +48,18 @@ class DatabaseConnection:
             self._local.connection.row_factory = sqlite3.Row
             # Activar claves foráneas
             self._local.connection.execute("PRAGMA foreign_keys = ON")
+        else:
+            # Verificar si la conexión está cerrada y recrearla si es necesario
+            try:
+                # Verificar si la conexión está cerrada accediendo a un atributo interno
+                # Si la conexión está cerrada, esto lanzará una excepción
+                _ = self._local.connection.total_changes
+            except (sqlite3.ProgrammingError, AttributeError):
+                # La conexión está cerrada, crear una nueva
+                self._local.connection = sqlite3.connect(DB_FILE, check_same_thread=False)
+                self._local.connection.row_factory = sqlite3.Row
+                # Activar claves foráneas
+                self._local.connection.execute("PRAGMA foreign_keys = ON")
         return self._local.connection
     
     def close(self):

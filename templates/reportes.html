@@ -67,15 +67,15 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="periodo-tab" data-bs-toggle="tab" 
-                data-bs-target="#periodo" type="button" role="tab">
-            Alquileres por Período
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
         <button class="nav-link" id="facturacion-tab" data-bs-toggle="tab" 
                 data-bs-target="#facturacion" type="button" role="tab">
             Facturación Mensual
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="exportar-csv-tab" data-bs-toggle="tab" 
+                data-bs-target="#exportar-csv" type="button" role="tab">
+            Exportar Lista Alquileres (CSV)
         </button>
     </li>
 </ul>
@@ -85,11 +85,8 @@
     <!-- Pestaña: Alquileres por Cliente -->
     <div class="tab-pane fade show active" id="alquileres-cliente" role="tabpanel">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <h5 class="mb-0">Listado de Alquileres por Cliente</h5>
-                <a href="/api/reportes/exportar-alquileres-cliente-excel" class="btn btn-success btn-sm">
-                    <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
-                </a>
             </div>
             <div class="card-body">
                 <div id="alquileres-cliente-content">
@@ -106,40 +103,11 @@
     <!-- Pestaña: Vehículos Más Alquilados -->
     <div class="tab-pane fade" id="vehiculos" role="tabpanel">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <h5 class="mb-0">Vehículos Más Alquilados</h5>
-                <a href="/api/reportes/exportar-vehiculos-excel" class="btn btn-success btn-sm">
-                    <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
-                </a>
             </div>
             <div class="card-body">
                 <div id="vehiculos-content">
-                    <div class="text-center">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pestaña: Alquileres por Período -->
-    <div class="tab-pane fade" id="periodo" role="tabpanel">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Alquileres por Período</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Seleccionar período:</label>
-                    <select class="form-select" id="periodo-select" onchange="cargarAlquileresPorPeriodo()">
-                        <option value="mes">Mes</option>
-                        <option value="trimestre">Trimestre</option>
-                        <option value="año">Año</option>
-                    </select>
-                </div>
-                <div id="periodo-content">
                     <div class="text-center">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Cargando...</span>
@@ -163,6 +131,23 @@
                             <span class="visually-hidden">Cargando...</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestaña: Exportar Lista Alquileres (CSV) -->
+    <div class="tab-pane fade" id="exportar-csv" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Exportar Lista de Alquileres a CSV</h5>
+            </div>
+            <div class="card-body">
+                <div id="exportar-csv-content">
+                    <p class="mb-3">Haga clic en el botón para descargar la lista completa de alquileres en formato CSV.</p>
+                    <a href="/api/reportes/exportar-alquileres-csv" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Descargar CSV
+                    </a>
                 </div>
             </div>
         </div>
@@ -274,39 +259,6 @@ function cargarVehiculosMasAlquilados() {
         });
 }
 
-// Cargar alquileres por período
-function cargarAlquileresPorPeriodo() {
-    const periodo = document.getElementById('periodo-select').value;
-    fetch(`/api/reportes/alquileres-por-periodo/${periodo}`)
-        .then(response => response.json())
-        .then(data => {
-            const container = document.getElementById('periodo-content');
-            if (data.length === 0) {
-                container.innerHTML = '<p class="text-muted">No hay datos disponibles para este período.</p>';
-                return;
-            }
-            
-            let html = '<table class="table table-striped table-hover"><thead><tr>' +
-                `<th>Período (${periodo})</th><th>Cantidad de Alquileres</th><th>Total Facturado</th>` +
-                '</tr></thead><tbody>';
-            
-            data.forEach(item => {
-                html += `<tr>
-                    <td>${item.periodo}</td>
-                    <td>${item.cantidad_alquileres || 0}</td>
-                    <td>$${parseFloat(item.total_facturado || 0).toFixed(2)}</td>
-                </tr>`;
-            });
-            
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        })
-        .catch(error => {
-            document.getElementById('periodo-content').innerHTML = 
-                '<div class="alert alert-danger">Error al cargar los datos.</div>';
-        });
-}
-
 // Cargar facturación mensual con gráfico
 function cargarFacturacionMensual() {
     fetch('/api/reportes/facturacion-mensual-grafico')
@@ -337,10 +289,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('vehiculos-tab').addEventListener('shown.bs.tab', function() {
         cargarVehiculosMasAlquilados();
-    });
-    
-    document.getElementById('periodo-tab').addEventListener('shown.bs.tab', function() {
-        cargarAlquileresPorPeriodo();
     });
     
     document.getElementById('facturacion-tab').addEventListener('shown.bs.tab', function() {

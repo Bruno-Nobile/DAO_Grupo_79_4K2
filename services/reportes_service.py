@@ -17,6 +17,7 @@ if MATPLOTLIB_AVAILABLE:
     import matplotlib
     matplotlib.use('Agg')  # Backend no interactivo para servidor
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
 
 # Verificar disponibilidad de openpyxl para exportación a Excel
 try:
@@ -180,14 +181,53 @@ class ReportesService:
         periodos = list(map(lambda d: d['periodo'], datos))
         totales = list(map(lambda d: float(d['total_facturado'] or 0), datos))
         
+        # Función para formatear números en el eje Y
+        def formatear_valor(val, pos):
+            """Formatea valores grandes en formato legible (K, M)"""
+            if val >= 1_000_000:
+                return f'${val/1_000_000:.2f}M'
+            elif val >= 1_000:
+                return f'${val/1_000:.1f}K'
+            else:
+                return f'${val:.0f}'
+        
         # Crear gráfico
-        plt.figure(figsize=(12, 6))
-        plt.bar(periodos, totales, color='steelblue', alpha=0.7)
-        plt.xlabel('Mes (YYYY-MM)', fontsize=12)
-        plt.ylabel('Facturación ($)', fontsize=12)
-        plt.title('Facturación Mensual', fontsize=14, fontweight='bold')
+        fig, ax = plt.subplots(figsize=(12, 6))
+        bars = ax.bar(periodos, totales, color='steelblue', alpha=0.7, edgecolor='navy', linewidth=1.2)
+        
+        # Configurar ejes
+        ax.set_xlabel('Mes (YYYY-MM)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Facturación', fontsize=12, fontweight='bold')
+        ax.set_title('Facturación Mensual', fontsize=16, fontweight='bold', pad=20)
+        
+        # Formatear eje Y con formato legible
+        ax.yaxis.set_major_formatter(FuncFormatter(formatear_valor))
+        
+        # Rotar etiquetas del eje X
         plt.xticks(rotation=45, ha='right')
-        plt.grid(axis='y', alpha=0.3)
+        
+        # Agregar grid
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.set_axisbelow(True)
+        
+        # Agregar valores en las barras si hay espacio suficiente
+        max_val = max(totales) if totales else 0
+        if max_val > 0:
+            for i, (bar, total) in enumerate(zip(bars, totales)):
+                height = bar.get_height()
+                # Mostrar valor solo si la barra es lo suficientemente alta
+                if height > max_val * 0.05:  # Solo si la barra es > 5% del máximo
+                    if total >= 1_000_000:
+                        label = f'${total/1_000_000:.2f}M'
+                    elif total >= 1_000:
+                        label = f'${total/1_000:.1f}K'
+                    else:
+                        label = f'${total:.0f}'
+                    ax.text(bar.get_x() + bar.get_width()/2., height,
+                           label,
+                           ha='center', va='bottom', fontsize=9, fontweight='bold')
+        
+        # Ajustar layout
         plt.tight_layout()
         
         # Convertir gráfico a imagen base64
