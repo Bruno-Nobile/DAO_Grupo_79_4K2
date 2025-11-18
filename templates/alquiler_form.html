@@ -38,7 +38,10 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Fecha Inicio *</label>
-                <input type="date" class="form-control" name="fecha_inicio" required>
+                <input type="date" class="form-control" name="fecha_inicio" 
+                       id="fecha_inicio"
+                       title="La fecha de inicio debe ser mayor a la fecha actual" required>
+                <small class="form-text text-muted">Debe ser mayor a la fecha actual</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Fecha Fin *</label>
@@ -51,5 +54,40 @@
         </form>
     </div>
 </div>
+<script>
+    // Validar que la fecha de inicio sea mayor a la fecha actual
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaFin = document.querySelector('input[name="fecha_fin"]');
+    const fechaActual = new Date('{{ fecha_actual }}');
+    fechaActual.setHours(0, 0, 0, 0);
+    
+    // Establecer fecha mínima (mañana) para fecha inicio
+    const fechaMinima = new Date(fechaActual);
+    fechaMinima.setDate(fechaMinima.getDate() + 1);
+    fechaInicio.min = fechaMinima.toISOString().split('T')[0];
+    
+    fechaInicio.addEventListener('change', function() {
+        const fechaSeleccionada = new Date(this.value);
+        fechaSeleccionada.setHours(0, 0, 0, 0);
+        
+        if (fechaSeleccionada <= fechaActual) {
+            alert('La fecha de inicio debe ser mayor a la fecha actual');
+            this.value = '';
+            return;
+        }
+        
+        // Establecer fecha mínima para fecha fin
+        if (this.value) {
+            fechaFin.min = this.value;
+        }
+    });
+    
+    fechaFin.addEventListener('change', function() {
+        if (fechaInicio.value && this.value < fechaInicio.value) {
+            alert('La fecha fin debe ser mayor o igual a la fecha de inicio');
+            this.value = '';
+        }
+    });
+</script>
 {% endblock %}
 

@@ -22,7 +22,10 @@ def calcular_costo(costo_diario, fecha_inicio_str, fecha_fin_str):
 
 
 def vehiculo_disponible(id_vehiculo, fecha_inicio_str, fecha_fin_str):
-    """Verifica si el vehículo no tiene alquileres solapados en ese período"""
+    """
+    Verifica si el vehículo no tiene alquileres solapados en ese período
+    Programación Estructurada - Función bien organizada
+    """
     conn = get_connection()
     c = conn.cursor()
     
@@ -35,40 +38,48 @@ def vehiculo_disponible(id_vehiculo, fecha_inicio_str, fecha_fin_str):
     c.execute(query, (id_vehiculo, fecha_inicio_str, fecha_fin_str))
     cnt = c.fetchone()[0]
     
-    conn.close()
+    # No cerrar la conexión aquí - el Singleton la maneja por thread
+    # conn.close()  # Removido para evitar cerrar conexión compartida
     return cnt == 0
 
 
 def registrar_alquiler(fecha_inicio, fecha_fin, id_cliente, id_vehiculo, id_empleado=None):
-    """Registra un nuevo alquiler en la base de datos"""
+    """
+    Registra un nuevo alquiler en la base de datos
+    Programación Estructurada - Función bien organizada
+    """
     conn = get_connection()
     c = conn.cursor()
     
-    # Obtener costo diario del vehículo
-    c.execute("SELECT costo_diario FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
-    row = c.fetchone()
-    
-    if not row:
-        conn.close()
-        raise ValueError("Vehículo no encontrado.")
-    
-    costo_diario = row["costo_diario"]
-    
-    # Verificar disponibilidad
-    if not vehiculo_disponible(id_vehiculo, fecha_inicio, fecha_fin):
-        conn.close()
-        raise ValueError("Vehículo no disponible en el periodo indicado.")
-    
-    # Calcular costo total
-    costo_total = calcular_costo(costo_diario, fecha_inicio, fecha_fin)
-    
-    # Insertar alquiler
-    c.execute(
-        """INSERT INTO alquiler (fecha_inicio, fecha_fin, costo_total, id_cliente, id_vehiculo, id_empleado)
-           VALUES (?,?,?,?,?,?)""",
-        (fecha_inicio, fecha_fin, costo_total, id_cliente, id_vehiculo, id_empleado)
-    )
-    
-    conn.commit()
-    conn.close()
-    return True
+    try:
+        # Obtener costo diario del vehículo
+        c.execute("SELECT costo_diario FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
+        row = c.fetchone()
+        
+        if not row:
+            raise ValueError("Vehículo no encontrado.")
+        
+        costo_diario = row["costo_diario"]
+        
+        # Verificar disponibilidad (no cierra la conexión)
+        if not vehiculo_disponible(id_vehiculo, fecha_inicio, fecha_fin):
+            raise ValueError("Vehículo no disponible en el periodo indicado.")
+        
+        # Calcular costo total
+        costo_total = calcular_costo(costo_diario, fecha_inicio, fecha_fin)
+        
+        # Insertar alquiler
+        c.execute(
+            """INSERT INTO alquiler (fecha_inicio, fecha_fin, costo_total, id_cliente, id_vehiculo, id_empleado)
+               VALUES (?,?,?,?,?,?)""",
+            (fecha_inicio, fecha_fin, costo_total, id_cliente, id_vehiculo, id_empleado)
+        )
+        
+        conn.commit()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido - el Singleton maneja el ciclo de vida
+        return True
+    except Exception as e:
+        # En caso de error, hacer rollback
+        conn.rollback()
+        raise e

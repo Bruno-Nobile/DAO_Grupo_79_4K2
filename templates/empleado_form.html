@@ -19,7 +19,10 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">DNI</label>
-                <input type="text" class="form-control" name="dni" value="{{ empleado.dni if empleado else '' }}">
+                <input type="text" class="form-control" name="dni" value="{{ empleado.dni if empleado else '' }}" 
+                       pattern="^\d{8}$" maxlength="8" 
+                       title="El DNI debe tener exactamente 8 dígitos numéricos">
+                <small class="form-text text-muted">Formato: 8 dígitos numéricos</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Cargo</label>
@@ -27,11 +30,17 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Teléfono</label>
-                <input type="text" class="form-control" name="telefono" value="{{ empleado.telefono if empleado else '' }}">
+                <input type="text" class="form-control" name="telefono" value="{{ empleado.telefono if empleado else '' }}" 
+                       pattern="^\d+$" 
+                       title="El teléfono debe contener solo dígitos numéricos">
+                <small class="form-text text-muted">Solo dígitos numéricos</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Email</label>
-                <input type="email" class="form-control" name="email" value="{{ empleado.email if empleado else '' }}">
+                <input type="email" class="form-control" name="email" value="{{ empleado.email if empleado else '' }}" 
+                       pattern="[^@]+@[^@]+\.[^@]+" 
+                       title="El email debe tener el formato x@x.com">
+                <small class="form-text text-muted">Formato: x@x.com</small>
             </div>
             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                 <a href="{{ url_for('empleados') }}" class="btn btn-secondary">Cancelar</a>

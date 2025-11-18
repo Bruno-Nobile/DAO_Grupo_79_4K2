@@ -14,6 +14,7 @@ import os
 # Agregar directorio padre al path para imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
+from validations import validar_patente, validar_fecha_mantenimiento
 
 
 class VehiculosTab(ttk.Frame):
@@ -142,19 +143,39 @@ class DatosVehiculoDialog(simpledialog.Dialog):
 
     def validate(self):
         """Valida los datos ingresados"""
-        if not self.entries["Patente:"].get():
+        # Validar patente
+        patente = self.entries["Patente:"].get().strip()
+        if not patente:
             messagebox.showwarning("Validación", "Patente requerida")
             return False
+        
+        if not validar_patente(patente):
+            messagebox.showerror("Validación", "La patente debe seguir el formato ABC-123 o AB-123-CD")
+            return False
+        
+        # Validar fecha de mantenimiento
+        fecha_mant = self.entries["Fecha último mant (YYYY-MM-DD):"].get().strip()
+        if fecha_mant and not validar_fecha_mantenimiento(fecha_mant):
+            messagebox.showerror("Validación", "La fecha de último mantenimiento no puede ser mayor a la fecha actual")
+            return False
+        
+        # Validar costo diario
         try:
             float(self.entries["Costo diario:"].get())
         except Exception:
             messagebox.showwarning("Validación", "Costo diario inválido")
             return False
+        
         return True
 
     def apply(self):
         """Guarda los datos en la base de datos"""
-        values = {k: v.get() for k, v in self.entries.items()}
+        values = {k: v.get().strip() for k, v in self.entries.items()}
+        
+        # Normalizar patente a mayúsculas
+        patente = values["Patente:"].upper()
+        fecha_mant = values["Fecha último mant (YYYY-MM-DD):"] or None
+        
         conn = get_connection()
         c = conn.cursor()
         
@@ -164,9 +185,9 @@ class DatosVehiculoDialog(simpledialog.Dialog):
                     """UPDATE vehiculo SET patente=?, marca=?, modelo=?, tipo=?, 
                        costo_diario=?, estado=?, fecha_ultimo_mantenimiento=? 
                        WHERE id_vehiculo=?""",
-                    (values["Patente:"], values["Marca:"], values["Modelo:"],
+                    (patente, values["Marca:"], values["Modelo:"],
                      values["Tipo:"], float(values["Costo diario:"]), values["Estado:"],
-                     values["Fecha último mant (YYYY-MM-DD):"] or None, self.id_vehiculo)
+                     fecha_mant, self.id_vehiculo)
                 )
             except sqlite3.IntegrityError as e:
                 messagebox.showerror("Error", f"No se pudo actualizar: {e}")
@@ -175,9 +196,9 @@ class DatosVehiculoDialog(simpledialog.Dialog):
                 c.execute(
                     """INSERT INTO vehiculo (patente, marca, modelo, tipo, costo_diario, 
                        estado, fecha_ultimo_mantenimiento) VALUES (?,?,?,?,?,?,?)""",
-                    (values["Patente:"], values["Marca:"], values["Modelo:"],
+                    (patente, values["Marca:"], values["Modelo:"],
                      values["Tipo:"], float(values["Costo diario:"]), values["Estado:"],
-                     values["Fecha último mant (YYYY-MM-DD):"] or None)
+                     fecha_mant)
                 )
             except sqlite3.IntegrityError as e:
                 messagebox.showerror("Error", f"No se pudo insertar: {e}")

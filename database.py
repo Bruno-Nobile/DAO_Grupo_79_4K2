@@ -3,22 +3,35 @@
 
 """
 Módulo de base de datos para el sistema de alquiler de vehículos
+Programación Estructurada - Funciones bien organizadas
+Compatibilidad - Mantiene funciones legacy para compatibilidad con código existente
 """
 
 import sqlite3
 from config import DB_FILE
 
+# Patrón Singleton - Importar la nueva implementación
+from persistence.database_connection import DatabaseConnection
+
 
 def get_connection():
-    """Obtiene una conexión a la base de datos"""
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """
+    Obtiene una conexión a la base de datos
+    Programación Estructurada - Función de compatibilidad
+    Patrón Singleton - Usa la instancia única de DatabaseConnection
+    """
+    # Patrón Singleton - Obtener instancia única
+    db = DatabaseConnection()
+    return db.get_connection()
 
 
 def init_db():
-    """Inicializa la base de datos con las tablas necesarias"""
-    conn = get_connection()
+    """
+    Inicializa la base de datos con las tablas necesarias
+    Programación Estructurada - Función bien organizada
+    """
+    # Crear conexión temporal para inicialización (no usar Singleton para evitar conflictos)
+    conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     
     # Activar claves foráneas
@@ -94,8 +107,13 @@ def init_db():
 
 
 def seed_sample_data():
-    """Inserta datos de prueba si la base de datos está vacía"""
-    conn = get_connection()
+    """
+    Inserta datos de prueba si la base de datos está vacía
+    Programación Estructurada - Función bien organizada
+    """
+    # Crear conexión temporal para seed (no usar Singleton para evitar conflictos)
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     
     # Insertar clientes de prueba

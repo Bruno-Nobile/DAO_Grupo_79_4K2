@@ -15,6 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 from models import registrar_alquiler
+from validations import validar_fecha_inicio_alquiler
 
 
 class AlquileresTab(ttk.Frame):
@@ -224,6 +225,7 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
 
     def validate(self):
         """Valida los datos ingresados"""
+        # Validar formato de fechas
         try:
             datetime.strptime(self.fecha_inicio.get(), "%Y-%m-%d")
             datetime.strptime(self.fecha_fin.get(), "%Y-%m-%d")
@@ -231,6 +233,13 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
             messagebox.showwarning("Validación", "Fechas en formato inválido (usar YYYY-MM-DD)")
             return False
         
+        # Validar que la fecha de inicio sea mayor a la fecha actual
+        fecha_inicio = self.fecha_inicio.get().strip()
+        if not validar_fecha_inicio_alquiler(fecha_inicio):
+            messagebox.showerror("Validación", "La fecha de inicio debe ser mayor a la fecha actual")
+            return False
+        
+        # Validar que cliente y vehículo estén presentes
         if not self.id_cliente.get() or not self.id_vehiculo.get():
             messagebox.showwarning("Validación", "Cliente y Vehículo son requeridos (ID numérico)")
             return False

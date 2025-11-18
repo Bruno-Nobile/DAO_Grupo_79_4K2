@@ -5,11 +5,16 @@
 Sistema de Alquiler de Vehículos - Aplicación Web Flask
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from database import init_db, seed_sample_data, get_connection
 from models import registrar_alquiler, calcular_costo, vehiculo_disponible
+from validations import (
+    validar_dni, validar_telefono, validar_email, validar_patente,
+    validar_fecha_mantenimiento, validar_fecha_inicio_alquiler
+)
+from services.reportes_service import ReportesService
 import sqlite3
-from datetime import datetime, date
+from datetime import date, datetime
 
 app = Flask(__name__)
 app.secret_key = 'alquiler_vehiculos_secret_key_2024'
@@ -70,13 +75,30 @@ def clientes():
 def nuevo_cliente():
     """Crear nuevo cliente"""
     if request.method == 'POST':
+        # Validaciones
+        dni = request.form.get('dni', '').strip()
+        telefono = request.form.get('telefono', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        if dni and not validar_dni(dni):
+            flash('El DNI debe tener exactamente 8 dígitos numéricos', 'error')
+            return render_template('cliente_form.html', cliente=None, titulo="Nuevo Cliente")
+        
+        if telefono and not validar_telefono(telefono):
+            flash('El teléfono debe contener solo dígitos numéricos', 'error')
+            return render_template('cliente_form.html', cliente=None, titulo="Nuevo Cliente")
+        
+        if email and not validar_email(email):
+            flash('El email debe tener el formato x@x.com', 'error')
+            return render_template('cliente_form.html', cliente=None, titulo="Nuevo Cliente")
+        
         conn = get_connection()
         c = conn.cursor()
         try:
             c.execute("""INSERT INTO cliente (nombre, apellido, dni, telefono, direccion, email) 
                         VALUES (?,?,?,?,?,?)""",
-                     (request.form['nombre'], request.form['apellido'], request.form['dni'],
-                      request.form['telefono'], request.form['direccion'], request.form['email']))
+                     (request.form['nombre'], request.form['apellido'], dni,
+                      telefono, request.form['direccion'], email))
             conn.commit()
             flash('Cliente creado exitosamente', 'success')
         except sqlite3.IntegrityError as e:
@@ -94,11 +116,37 @@ def editar_cliente(id):
     c = conn.cursor()
     
     if request.method == 'POST':
+        # Validaciones
+        dni = request.form.get('dni', '').strip()
+        telefono = request.form.get('telefono', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        if dni and not validar_dni(dni):
+            flash('El DNI debe tener exactamente 8 dígitos numéricos', 'error')
+            c.execute("SELECT * FROM cliente WHERE id_cliente = ?", (id,))
+            cliente = c.fetchone()
+            conn.close()
+            return render_template('cliente_form.html', cliente=cliente, titulo="Editar Cliente")
+        
+        if telefono and not validar_telefono(telefono):
+            flash('El teléfono debe contener solo dígitos numéricos', 'error')
+            c.execute("SELECT * FROM cliente WHERE id_cliente = ?", (id,))
+            cliente = c.fetchone()
+            conn.close()
+            return render_template('cliente_form.html', cliente=cliente, titulo="Editar Cliente")
+        
+        if email and not validar_email(email):
+            flash('El email debe tener el formato x@x.com', 'error')
+            c.execute("SELECT * FROM cliente WHERE id_cliente = ?", (id,))
+            cliente = c.fetchone()
+            conn.close()
+            return render_template('cliente_form.html', cliente=cliente, titulo="Editar Cliente")
+        
         try:
             c.execute("""UPDATE cliente SET nombre=?, apellido=?, dni=?, telefono=?, direccion=?, email=? 
                         WHERE id_cliente=?""",
-                     (request.form['nombre'], request.form['apellido'], request.form['dni'],
-                      request.form['telefono'], request.form['direccion'], request.form['email'], id))
+                     (request.form['nombre'], request.form['apellido'], dni,
+                      telefono, request.form['direccion'], email, id))
             conn.commit()
             flash('Cliente actualizado exitosamente', 'success')
         except sqlite3.IntegrityError as e:
@@ -153,13 +201,24 @@ def vehiculos():
 def nuevo_vehiculo():
     """Crear nuevo vehículo"""
     if request.method == 'POST':
+        # Validaciones
+        patente = request.form.get('patente', '').strip()
+        fecha_mant = request.form.get('fecha_ultimo_mantenimiento', '').strip() or None
+        
+        if not validar_patente(patente):
+            flash('La patente debe seguir el formato ABC-123 o AB-123-CD', 'error')
+            return render_template('vehiculo_form.html', vehiculo=None, titulo="Nuevo Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
+        
+        if fecha_mant and not validar_fecha_mantenimiento(fecha_mant):
+            flash('La fecha de último mantenimiento no puede ser mayor a la fecha actual', 'error')
+            return render_template('vehiculo_form.html', vehiculo=None, titulo="Nuevo Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
+        
         conn = get_connection()
         c = conn.cursor()
         try:
-            fecha_mant = request.form['fecha_ultimo_mantenimiento'] or None
             c.execute("""INSERT INTO vehiculo (patente, marca, modelo, tipo, costo_diario, estado, fecha_ultimo_mantenimiento) 
                         VALUES (?,?,?,?,?,?,?)""",
-                     (request.form['patente'], request.form['marca'], request.form['modelo'],
+                     (patente.upper(), request.form['marca'], request.form['modelo'],
                       request.form['tipo'], float(request.form['costo_diario']), request.form['estado'], fecha_mant))
             conn.commit()
             flash('Vehículo creado exitosamente', 'success')
@@ -168,7 +227,7 @@ def nuevo_vehiculo():
         finally:
             conn.close()
         return redirect(url_for('vehiculos'))
-    return render_template('vehiculo_form.html', vehiculo=None, titulo="Nuevo Vehículo")
+    return render_template('vehiculo_form.html', vehiculo=None, titulo="Nuevo Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
 
 
 @app.route('/vehiculos/editar/<int:id>', methods=['GET', 'POST'])
@@ -178,11 +237,28 @@ def editar_vehiculo(id):
     c = conn.cursor()
     
     if request.method == 'POST':
+        # Validaciones
+        patente = request.form.get('patente', '').strip()
+        fecha_mant = request.form.get('fecha_ultimo_mantenimiento', '').strip() or None
+        
+        if not validar_patente(patente):
+            flash('La patente debe seguir el formato ABC-123 o AB-123-CD', 'error')
+            c.execute("SELECT * FROM vehiculo WHERE id_vehiculo = ?", (id,))
+            vehiculo = c.fetchone()
+            conn.close()
+            return render_template('vehiculo_form.html', vehiculo=vehiculo, titulo="Editar Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
+        
+        if fecha_mant and not validar_fecha_mantenimiento(fecha_mant):
+            flash('La fecha de último mantenimiento no puede ser mayor a la fecha actual', 'error')
+            c.execute("SELECT * FROM vehiculo WHERE id_vehiculo = ?", (id,))
+            vehiculo = c.fetchone()
+            conn.close()
+            return render_template('vehiculo_form.html', vehiculo=vehiculo, titulo="Editar Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
+        
         try:
-            fecha_mant = request.form['fecha_ultimo_mantenimiento'] or None
             c.execute("""UPDATE vehiculo SET patente=?, marca=?, modelo=?, tipo=?, costo_diario=?, 
                         estado=?, fecha_ultimo_mantenimiento=? WHERE id_vehiculo=?""",
-                     (request.form['patente'], request.form['marca'], request.form['modelo'],
+                     (patente.upper(), request.form['marca'], request.form['modelo'],
                       request.form['tipo'], float(request.form['costo_diario']), request.form['estado'],
                       fecha_mant, id))
             conn.commit()
@@ -201,7 +277,7 @@ def editar_vehiculo(id):
         flash('Vehículo no encontrado', 'error')
         return redirect(url_for('vehiculos'))
     
-    return render_template('vehiculo_form.html', vehiculo=vehiculo, titulo="Editar Vehículo")
+    return render_template('vehiculo_form.html', vehiculo=vehiculo, titulo="Editar Vehículo", fecha_actual=date.today().strftime('%Y-%m-%d'))
 
 
 @app.route('/vehiculos/eliminar/<int:id>')
@@ -239,13 +315,30 @@ def empleados():
 def nuevo_empleado():
     """Crear nuevo empleado"""
     if request.method == 'POST':
+        # Validaciones
+        dni = request.form.get('dni', '').strip()
+        telefono = request.form.get('telefono', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        if dni and not validar_dni(dni):
+            flash('El DNI debe tener exactamente 8 dígitos numéricos', 'error')
+            return render_template('empleado_form.html', empleado=None, titulo="Nuevo Empleado")
+        
+        if telefono and not validar_telefono(telefono):
+            flash('El teléfono debe contener solo dígitos numéricos', 'error')
+            return render_template('empleado_form.html', empleado=None, titulo="Nuevo Empleado")
+        
+        if email and not validar_email(email):
+            flash('El email debe tener el formato x@x.com', 'error')
+            return render_template('empleado_form.html', empleado=None, titulo="Nuevo Empleado")
+        
         conn = get_connection()
         c = conn.cursor()
         try:
             c.execute("""INSERT INTO empleado (nombre, apellido, dni, cargo, telefono, email) 
                         VALUES (?,?,?,?,?,?)""",
-                     (request.form['nombre'], request.form['apellido'], request.form['dni'],
-                      request.form['cargo'], request.form['telefono'], request.form['email']))
+                     (request.form['nombre'], request.form['apellido'], dni,
+                      request.form['cargo'], telefono, email))
             conn.commit()
             flash('Empleado creado exitosamente', 'success')
         except sqlite3.IntegrityError as e:
@@ -263,11 +356,37 @@ def editar_empleado(id):
     c = conn.cursor()
     
     if request.method == 'POST':
+        # Validaciones
+        dni = request.form.get('dni', '').strip()
+        telefono = request.form.get('telefono', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        if dni and not validar_dni(dni):
+            flash('El DNI debe tener exactamente 8 dígitos numéricos', 'error')
+            c.execute("SELECT * FROM empleado WHERE id_empleado = ?", (id,))
+            empleado = c.fetchone()
+            conn.close()
+            return render_template('empleado_form.html', empleado=empleado, titulo="Editar Empleado")
+        
+        if telefono and not validar_telefono(telefono):
+            flash('El teléfono debe contener solo dígitos numéricos', 'error')
+            c.execute("SELECT * FROM empleado WHERE id_empleado = ?", (id,))
+            empleado = c.fetchone()
+            conn.close()
+            return render_template('empleado_form.html', empleado=empleado, titulo="Editar Empleado")
+        
+        if email and not validar_email(email):
+            flash('El email debe tener el formato x@x.com', 'error')
+            c.execute("SELECT * FROM empleado WHERE id_empleado = ?", (id,))
+            empleado = c.fetchone()
+            conn.close()
+            return render_template('empleado_form.html', empleado=empleado, titulo="Editar Empleado")
+        
         try:
             c.execute("""UPDATE empleado SET nombre=?, apellido=?, dni=?, cargo=?, telefono=?, email=? 
                         WHERE id_empleado=?""",
-                     (request.form['nombre'], request.form['apellido'], request.form['dni'],
-                      request.form['cargo'], request.form['telefono'], request.form['email'], id))
+                     (request.form['nombre'], request.form['apellido'], dni,
+                      request.form['cargo'], telefono, email, id))
             conn.commit()
             flash('Empleado actualizado exitosamente', 'success')
         except sqlite3.IntegrityError as e:
@@ -330,12 +449,32 @@ def alquileres():
 def nuevo_alquiler():
     """Crear nuevo alquiler"""
     if request.method == 'POST':
+        # Validaciones
+        fecha_inicio = request.form.get('fecha_inicio', '').strip()
+        
+        if not validar_fecha_inicio_alquiler(fecha_inicio):
+            flash('La fecha de inicio debe ser mayor a la fecha actual', 'error')
+            # Obtener listas para los selects
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT id_cliente, nombre, apellido FROM cliente ORDER BY apellido, nombre")
+            clientes = c.fetchall()
+            
+            c.execute("SELECT id_vehiculo, patente, marca, modelo FROM vehiculo ORDER BY patente")
+            vehiculos = c.fetchall()
+            
+            c.execute("SELECT id_empleado, nombre, apellido FROM empleado ORDER BY apellido, nombre")
+            empleados = c.fetchall()
+            conn.close()
+            return render_template('alquiler_form.html', clientes=clientes, vehiculos=vehiculos, 
+                                 empleados=empleados, fecha_actual=date.today().strftime('%Y-%m-%d'))
+        
         try:
             id_cliente = int(request.form['id_cliente'])
             id_vehiculo = int(request.form['id_vehiculo'])
             id_empleado = int(request.form['id_empleado']) if request.form['id_empleado'] else None
             
-            registrar_alquiler(request.form['fecha_inicio'], request.form['fecha_fin'],
+            registrar_alquiler(fecha_inicio, request.form['fecha_fin'],
                               id_cliente, id_vehiculo, id_empleado)
             flash('Alquiler registrado exitosamente', 'success')
         except ValueError as e:
@@ -356,7 +495,7 @@ def nuevo_alquiler():
     conn.close()
     
     return render_template('alquiler_form.html', clientes=clientes, vehiculos=vehiculos, 
-                         empleados=empleados)
+                         empleados=empleados, fecha_actual=date.today().strftime('%Y-%m-%d'))
 
 
 @app.route('/alquileres/<int:id>')
@@ -403,26 +542,100 @@ def registrar_multa(id):
 # Rutas para Reportes
 # ---------------------------
 
+# Instancia del servicio de reportes
+# Programación Orientada a Objetos - Instancia única del servicio
+reportes_service = ReportesService()
+
+
 @app.route('/reportes')
 def reportes():
-    """Página de reportes"""
+    """
+    Página principal de reportes
+    Programación Estructurada - Función bien organizada
+    """
     return render_template('reportes.html')
+
+
+@app.route('/api/reportes/alquileres-por-cliente')
+def api_alquileres_por_cliente():
+    """
+    API: Listado de alquileres por cliente
+    Programación Orientada a Objetos - Delegación al servicio
+    """
+    datos = reportes_service.alquileres_por_cliente()
+    return jsonify(datos)
+
+
+@app.route('/api/reportes/detalle-alquileres-cliente/<int:id_cliente>')
+def api_detalle_alquileres_cliente(id_cliente):
+    """
+    API: Detalle de alquileres de un cliente específico
+    Programación Orientada a Objetos - Delegación al servicio
+    """
+    datos = reportes_service.detalle_alquileres_por_cliente(id_cliente)
+    return jsonify(datos)
 
 
 @app.route('/api/reportes/vehiculos-mas-alquilados')
 def api_vehiculos_mas_alquilados():
-    """API para obtener vehículos más alquilados"""
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("""SELECT v.id_vehiculo, v.patente, v.marca||' '||v.modelo as desc, 
-                        COUNT(a.id_alquiler) as veces
-                 FROM vehiculo v
-                 LEFT JOIN alquiler a ON v.id_vehiculo = a.id_vehiculo
-                 GROUP BY v.id_vehiculo
-                 ORDER BY veces DESC""")
-    vehiculos = c.fetchall()
-    conn.close()
-    return jsonify([dict(r) for r in vehiculos])
+    """
+    API: Vehículos más alquilados
+    Programación Orientada a Objetos - Delegación al servicio
+    """
+    datos = reportes_service.vehiculos_mas_alquilados()
+    return jsonify(datos)
+
+
+@app.route('/api/reportes/alquileres-por-periodo/<periodo>')
+def api_alquileres_por_periodo(periodo):
+    """
+    API: Alquileres por período (mes, trimestre, año)
+    Programación Orientada a Objetos - Delegación al servicio
+    """
+    if periodo not in ['mes', 'trimestre', 'año']:
+        return jsonify({'error': 'Período inválido'}), 400
+    
+    datos = reportes_service.alquileres_por_periodo(periodo)
+    return jsonify(datos)
+
+
+@app.route('/api/reportes/facturacion-mensual-grafico')
+def api_facturacion_mensual_grafico():
+    """
+    API: Facturación mensual en gráfico de barras
+    Programación Orientada a Objetos - Delegación al servicio
+    """
+    img_base64 = reportes_service.facturacion_mensual_grafico()
+    if img_base64:
+        return jsonify({'imagen': img_base64})
+    else:
+        return jsonify({'error': 'No se pudo generar el gráfico'}), 500
+
+
+@app.route('/api/reportes/exportar-vehiculos-excel')
+def api_exportar_vehiculos_excel():
+    """
+    API: Exportar vehículos más alquilados a Excel
+    Programación Orientada a Objetos - Delegación al servicio
+    Programación Estructurada - Función bien organizada
+    """
+    try:
+        excel_buffer = reportes_service.exportar_vehiculos_mas_alquilados_excel()
+        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'vehiculos_mas_alquilados_{fecha}.xlsx'
+        
+        return send_file(
+            excel_buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+    except ImportError as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('reportes'))
+    except Exception as e:
+        flash(f'Error al generar el archivo Excel: {str(e)}', 'error')
+        return redirect(url_for('reportes'))
 
 
 if __name__ == '__main__':

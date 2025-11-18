@@ -11,6 +11,9 @@ Flask>=2.3.0
 # Visualización de datos (opcional, para gráficos)
 matplotlib>=3.5.0
 
+# Exportación a Excel
+openpyxl>=3.1.0
+
 # Base de datos (incluida en Python estándar)
 # sqlite3
 

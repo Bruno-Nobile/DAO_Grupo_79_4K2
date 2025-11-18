@@ -19,11 +19,17 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">DNI</label>
-                <input type="text" class="form-control" name="dni" value="{{ cliente.dni if cliente else '' }}">
+                <input type="text" class="form-control" name="dni" value="{{ cliente.dni if cliente else '' }}" 
+                       pattern="^\d{8}$" maxlength="8" 
+                       title="El DNI debe tener exactamente 8 dígitos numéricos">
+                <small class="form-text text-muted">Formato: 8 dígitos numéricos</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Teléfono</label>
-                <input type="text" class="form-control" name="telefono" value="{{ cliente.telefono if cliente else '' }}">
+                <input type="text" class="form-control" name="telefono" value="{{ cliente.telefono if cliente else '' }}" 
+                       pattern="^\d+$" 
+                       title="El teléfono debe contener solo dígitos numéricos">
+                <small class="form-text text-muted">Solo dígitos numéricos</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Dirección</label>
@@ -31,7 +37,10 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Email</label>
-                <input type="email" class="form-control" name="email" value="{{ cliente.email if cliente else '' }}">
+                <input type="email" class="form-control" name="email" value="{{ cliente.email if cliente else '' }}" 
+                       pattern="[^@]+@[^@]+\.[^@]+" 
+                       title="El email debe tener el formato x@x.com">
+                <small class="form-text text-muted">Formato: x@x.com</small>
             </div>
             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                 <a href="{{ url_for('clientes') }}" class="btn btn-secondary">Cancelar</a>

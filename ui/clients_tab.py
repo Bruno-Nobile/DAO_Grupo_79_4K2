@@ -14,6 +14,7 @@ import os
 # Agregar directorio padre al path para imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
+from validations import validar_dni, validar_telefono, validar_email
 
 
 class ClientesTab(ttk.Frame):
@@ -155,6 +156,25 @@ class DatosClienteDialog(simpledialog.Dialog):
         if not self.nombre.get() or not self.apellido.get():
             messagebox.showwarning("Validación", "Nombre y apellido son requeridos")
             return False
+        
+        # Validar DNI
+        dni = self.dni.get().strip()
+        if dni and not validar_dni(dni):
+            messagebox.showerror("Validación", "El DNI debe tener exactamente 8 dígitos numéricos")
+            return False
+        
+        # Validar teléfono
+        telefono = self.telefono.get().strip()
+        if telefono and not validar_telefono(telefono):
+            messagebox.showerror("Validación", "El teléfono debe contener solo dígitos numéricos")
+            return False
+        
+        # Validar email
+        email = self.email.get().strip()
+        if email and not validar_email(email):
+            messagebox.showerror("Validación", "El email debe tener el formato x@x.com")
+            return False
+        
         return True
 
     def apply(self):
@@ -162,13 +182,18 @@ class DatosClienteDialog(simpledialog.Dialog):
         conn = get_connection()
         c = conn.cursor()
         
+        # Limpiar y normalizar datos
+        dni = self.dni.get().strip()
+        telefono = self.telefono.get().strip()
+        email = self.email.get().strip()
+        
         if self.id_cliente:
             try:
                 c.execute(
                     """UPDATE cliente SET nombre=?, apellido=?, dni=?, telefono=?, direccion=?, email=? 
                        WHERE id_cliente=?""",
-                    (self.nombre.get(), self.apellido.get(), self.dni.get(),
-                     self.telefono.get(), self.direccion.get(), self.email.get(), self.id_cliente)
+                    (self.nombre.get(), self.apellido.get(), dni,
+                     telefono, self.direccion.get(), email, self.id_cliente)
                 )
             except sqlite3.IntegrityError as e:
                 messagebox.showerror("Error", f"No se pudo actualizar: {e}")
@@ -177,8 +202,8 @@ class DatosClienteDialog(simpledialog.Dialog):
                 c.execute(
                     """INSERT INTO cliente (nombre, apellido, dni, telefono, direccion, email) 
                        VALUES (?,?,?,?,?,?)""",
-                    (self.nombre.get(), self.apellido.get(), self.dni.get(),
-                     self.telefono.get(), self.direccion.get(), self.email.get())
+                    (self.nombre.get(), self.apellido.get(), dni,
+                     telefono, self.direccion.get(), email)
                 )
             except sqlite3.IntegrityError as e:
                 messagebox.showerror("Error", f"No se pudo insertar: {e}")
