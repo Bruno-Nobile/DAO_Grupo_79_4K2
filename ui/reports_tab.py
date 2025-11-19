@@ -346,15 +346,18 @@ class ReportesTab(ttk.Frame):
         rows = c.fetchall()
         conn.close()
 
-        labels = [r["desc"] for r in rows]
-        valores = [r["veces"] for r in rows]
-
-        if not valores or sum(valores) == 0:
-            messagebox.showinfo("Información", "No hay datos suficientes para el gráfico.")
+        # Filtrar vehículos con 0 alquileres
+        datos_filtrados = [(r["desc"], r["veces"]) for r in rows if r["veces"] > 0]
+        
+        if not datos_filtrados:
+            messagebox.showinfo("Información", "No hay vehículos con alquileres para mostrar en el gráfico.")
             return
+        
+        labels = [d[0] for d in datos_filtrados]
+        valores = [d[1] for d in datos_filtrados]
 
         fig, ax = plt.subplots(figsize=(6, 5))
-        wedges, _ = ax.pie(valores, labels=labels, startangle=90, wedgeprops=dict(width=0.4), autopct='%1.1f%%')
+        wedges, texts, autotexts = ax.pie(valores, labels=labels, startangle=90, wedgeprops=dict(width=0.4), autopct='%1.1f%%')
         ax.set_aspect('equal')
         ax.set_title("Vehículos más alquilados (anillo)")
 
