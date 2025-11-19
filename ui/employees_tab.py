@@ -15,6 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 from validations import validar_dni, validar_telefono, validar_email
+from .ui_utils import enable_treeview_sorting
 
 
 class EmpleadosTab(ttk.Frame):
@@ -36,11 +37,12 @@ class EmpleadosTab(ttk.Frame):
         ttk.Button(top, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
 
         cols = ("id", "nombre", "apellido", "dni", "cargo", "telefono", "email")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Colored.Treeview")
         for c in cols:
             self.tree.heading(c, text=c.capitalize())
             self.tree.column(c, width=110)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        enable_treeview_sorting(self.tree)
 
     def populate(self):
         """Carga los empleados en la tabla"""

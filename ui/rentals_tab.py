@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 from models import registrar_alquiler
 from validations import validar_fecha_inicio_alquiler
+from .ui_utils import enable_treeview_sorting
 
 
 class AlquileresTab(ttk.Frame):
@@ -38,11 +39,12 @@ class AlquileresTab(ttk.Frame):
         ttk.Button(top, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
 
         cols = ("id", "inicio", "fin", "cliente", "vehiculo", "empleado", "costo")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Colored.Treeview")
         for c in cols:
             self.tree.heading(c, text=c.capitalize())
             self.tree.column(c, width=130)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        enable_treeview_sorting(self.tree)
 
     def populate(self):
         """Carga los alquileres en la tabla"""

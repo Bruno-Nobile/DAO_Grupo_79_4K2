@@ -15,6 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 from validations import validar_patente, validar_fecha_mantenimiento
+from .ui_utils import enable_treeview_sorting
 
 
 class VehiculosTab(ttk.Frame):
@@ -36,11 +37,12 @@ class VehiculosTab(ttk.Frame):
         ttk.Button(top, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
 
         cols = ("id", "patente", "marca", "modelo", "tipo", "costo_diario", "estado", "fecha_mant")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Colored.Treeview")
         for c in cols:
             self.tree.heading(c, text=c.capitalize())
             self.tree.column(c, width=110)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        enable_treeview_sorting(self.tree)
 
     def populate(self):
         """Carga los vehículos en la tabla"""
@@ -88,16 +90,40 @@ class VehiculosTab(ttk.Frame):
         item = self.tree.item(sel[0])["values"]
         idv = item[0]
         
-        if messagebox.askyesno("Confirmar", "¿Eliminar vehículo seleccionado?"):
-            conn = get_connection()
-            c = conn.cursor()
-            try:
-                c.execute("DELETE FROM vehiculo WHERE id_vehiculo = ?", (idv,))
-                conn.commit()
-            except sqlite3.IntegrityError as e:
-                messagebox.showerror("Error", f"No se puede eliminar: {e}")
+        conn = get_connection()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT COUNT(*) AS total FROM alquiler WHERE id_vehiculo = ?", (idv,))
+            alquileres = c.fetchone()["total"]
+            c.execute("SELECT COUNT(*) AS total FROM mantenimiento WHERE id_vehiculo = ?", (idv,))
+            mantenimientos = c.fetchone()["total"]
+        except Exception:
+            alquileres = 0
+            mantenimientos = 0
+
+        mensaje = "¿Eliminar vehículo seleccionado?"
+        if alquileres:
+            mensaje += f"\nSe eliminarán {alquileres} alquiler(es) vinculados."
+        if mantenimientos:
+            mensaje += f"\nSe eliminarán {mantenimientos} mantenimiento(s) registrados."
+
+        if not messagebox.askyesno("Confirmar", mensaje):
             conn.close()
-            self.populate()
+            return
+
+        try:
+            if alquileres:
+                c.execute("DELETE FROM alquiler WHERE id_vehiculo = ?", (idv,))
+            if mantenimientos:
+                c.execute("DELETE FROM mantenimiento WHERE id_vehiculo = ?", (idv,))
+            c.execute("DELETE FROM vehiculo WHERE id_vehiculo = ?", (idv,))
+            conn.commit()
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            messagebox.showerror("Error", f"No se puede eliminar: {e}")
+        finally:
+            conn.close()
+        self.populate()
 
 
 class DatosVehiculoDialog(simpledialog.Dialog):

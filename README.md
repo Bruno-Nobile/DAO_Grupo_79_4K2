@@ -19,9 +19,10 @@ Sistema de gestión de alquiler de vehículos desarrollado con Python, Tkinter y
 ## Requisitos
 
 - Python 3.7 o superior
-- Flask 2.3+ (para versión web)
-- tkinter (incluido en Python estándar, para versión desktop)
-- matplotlib (opcional, para gráficos en versión desktop)
+- tkinter (incluido en Python estándar)
+- matplotlib (opcional, para gráficos interactivos)
+- openpyxl (para exportar a Excel)
+- fpdf2 (para exportar reportes a PDF)
 
 ## Instalación
 
@@ -40,29 +41,11 @@ pip install matplotlib
 
 ## Uso
 
-Este proyecto tiene **DOS VERSIONES** de la aplicación:
-
-### 1. Aplicación Desktop (Tkinter)
-
 Para ejecutar la aplicación de escritorio:
 
 ```bash
 python main.py
 ```
-
-O hacer doble clic en `start.bat`
-
-### 2. Aplicación Web (Flask)
-
-Para ejecutar la aplicación web:
-
-```bash
-python web_app.py
-```
-
-O hacer doble clic en `start_web.bat`
-
-La aplicación web estará disponible en: **http://localhost:8080**
 
 ## Estructura del Proyecto
 
@@ -72,26 +55,9 @@ DAO_Grupo_79_4K2/
 ├── database.py                  # Funciones de base de datos
 ├── models.py                    # Lógica de negocio
 ├── main.py                      # Punto de entrada - App Desktop
-├── web_app.py                   # Aplicación web Flask
 ├── requirements.txt             # Dependencias
 ├── README.md                    # Este archivo
-├── start.bat                    # Inicio rápido Desktop
-├── start_web.bat                # Inicio rápido Web
 ├── alquiler_vehiculos.db        # Base de datos SQLite
-├── templates/                   # Templates HTML (versión web)
-│   ├── base.html
-│   ├── index.html
-│   ├── clientes.html
-│   ├── cliente_form.html
-│   ├── vehiculos.html
-│   ├── vehiculo_form.html
-│   ├── empleados.html
-│   ├── empleado_form.html
-│   ├── alquileres.html
-│   ├── alquiler_form.html
-│   ├── alquiler_detalle.html
-│   ├── multa_form.html
-│   └── reportes.html
 └── ui/                          # Interfaz Desktop (Tkinter)
     ├── __init__.py
     ├── main_window.py          # Ventana principal
@@ -137,10 +103,11 @@ La base de datos se crea automáticamente en `alquiler_vehiculos.db` al ejecutar
 - Registrar costos y observaciones
 
 ### Reportes
-- Listar todos los alquileres o por cliente específico
-- Identificar vehículos más alquilados
-- Ver gráfico de facturación mensual
-- Exportar listado de alquileres a CSV
+- Listar alquileres por cliente y exportarlos en PDF
+- Vehículos más alquilados en tabla y gráfico de anillos (guardable como imagen)
+- Alquileres por período (mes / trimestre / año) con exportación a PDF y Excel
+- Facturación mensual con gráfico de barras y exportación como imagen
+- Exportación completa de alquileres a CSV
 
 ## Licencia
 

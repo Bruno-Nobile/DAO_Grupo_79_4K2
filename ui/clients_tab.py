@@ -15,6 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 from validations import validar_dni, validar_telefono, validar_email
+from .ui_utils import enable_treeview_sorting
 
 
 class ClientesTab(ttk.Frame):
@@ -37,11 +38,12 @@ class ClientesTab(ttk.Frame):
 
         # Treeview
         cols = ("id", "nombre", "apellido", "dni", "telefono", "direccion", "email")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Colored.Treeview")
         for c in cols:
             self.tree.heading(c, text=c.capitalize())
             self.tree.column(c, width=100)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        enable_treeview_sorting(self.tree)
 
     def populate(self):
         """Carga los clientes en la tabla"""
@@ -88,16 +90,36 @@ class ClientesTab(ttk.Frame):
         item = self.tree.item(sel[0])["values"]
         idc = item[0]
         
-        if messagebox.askyesno("Confirmar", "¿Eliminar cliente seleccionado?"):
-            conn = get_connection()
-            c = conn.cursor()
-            try:
-                c.execute("DELETE FROM cliente WHERE id_cliente = ?", (idc,))
-                conn.commit()
-            except sqlite3.IntegrityError as e:
-                messagebox.showerror("Error", f"No se puede eliminar: {e}")
+        conn = get_connection()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT COUNT(*) AS total FROM alquiler WHERE id_cliente = ?", (idc,))
+            asociados = c.fetchone()["total"]
+        except Exception:
+            asociados = 0
+
+        mensaje = "¿Eliminar cliente seleccionado?"
+        if asociados:
+            mensaje += (
+                f"\nSe eliminarán también {asociados} alquiler(es) asociados "
+                "y sus multas correspondientes."
+            )
+
+        if not messagebox.askyesno("Confirmar", mensaje):
             conn.close()
-            self.populate()
+            return
+
+        try:
+            if asociados:
+                c.execute("DELETE FROM alquiler WHERE id_cliente = ?", (idc,))
+            c.execute("DELETE FROM cliente WHERE id_cliente = ?", (idc,))
+            conn.commit()
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            messagebox.showerror("Error", f"No se puede eliminar: {e}")
+        finally:
+            conn.close()
+        self.populate()
 
 
 class DatosClienteDialog(simpledialog.Dialog):
