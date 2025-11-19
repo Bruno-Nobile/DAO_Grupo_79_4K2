@@ -62,14 +62,14 @@ def validar_fecha_mantenimiento(fecha_str):
 
 
 def validar_fecha_inicio_alquiler(fecha_str):
-    """Valida que la fecha de inicio sea mayor a la fecha actual"""
+    """Valida que la fecha de inicio sea mayor o igual a la fecha actual"""
     if not fecha_str:
         return False
     fecha_limpia = fecha_str.strip()
     try:
         fecha_inicio = datetime.strptime(fecha_limpia, '%Y-%m-%d').date()
         fecha_actual = date.today()
-        return fecha_inicio > fecha_actual
+        return fecha_inicio >= fecha_actual
     except ValueError:
         return False
 

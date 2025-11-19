@@ -50,7 +50,7 @@ class AlquileresTab(ttk.Frame):
         ttk.Button(top_alq, text="Nuevo Alquiler", command=self.nuevo_alquiler).pack(side=tk.LEFT)
         ttk.Button(top_alq, text="Ver Detalle", command=self.ver_detalle).pack(side=tk.LEFT, padx=5)
         ttk.Button(top_alq, text="Eliminar", command=self.eliminar_alquiler).pack(side=tk.LEFT, padx=5)
-        ttk.Button(top_alq, text="Registrar Multa/Damage", command=self.registrar_multa).pack(side=tk.LEFT, padx=5)
+        ttk.Button(top_alq, text="Registrar Multa/Daño", command=self.registrar_multa).pack(side=tk.LEFT, padx=5)
         ttk.Button(top_alq, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
         
         cols = ("id", "inicio", "fin", "cliente", "vehiculo", "empleado", "costo")
@@ -423,10 +423,10 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
             messagebox.showwarning("Validación", "Fechas en formato inválido (usar YYYY-MM-DD)")
             return False
         
-        # Validar que la fecha de inicio sea mayor a la fecha actual
+        # Validar que la fecha de inicio sea mayor o igual a la fecha actual
         fecha_inicio = self.fecha_inicio.get().strip()
         if not validar_fecha_inicio_alquiler(fecha_inicio):
-            messagebox.showerror("Validación", "La fecha de inicio debe ser mayor a la fecha actual")
+            messagebox.showerror("Validación", "La fecha de inicio debe ser mayor o igual a la fecha actual")
             return False
         
         # Validar que cliente y vehículo estén presentes
@@ -511,14 +511,14 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
 
 class DialogMulta(simpledialog.Dialog):
     """
-    Diálogo completo para registrar multa/damage
+    Diálogo completo para registrar multa/daño
     Programación Orientada a Objetos - Clase de diálogo
     """
     
     def __init__(self, parent, id_alquiler, on_save=None):
         self.id_alquiler = id_alquiler
         self.on_save = on_save
-        super().__init__(parent, "Registrar Multa/Damage")
+        super().__init__(parent, "Registrar Multa/Daño")
     
     def body(self, frame):
         """
