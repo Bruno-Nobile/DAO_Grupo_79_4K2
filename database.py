@@ -157,29 +157,36 @@ def seed_sample_data():
                 empleados_a_insertar
             )
 
-    # Insertar vehículos de prueba (si hay menos de 10)
-    c.execute("SELECT COUNT(*) FROM vehiculo")
-    count_vehiculos = c.fetchone()[0]
-    if count_vehiculos < 10:
-        todos_vehiculos = [
-            ("ABC123", "Toyota", "Corolla", "Sedan", 5000.0, "disponible", "2024-10-15"),
-            ("DEF456", "Volkswagen", "Gol", "Hatchback", 3500.0, "disponible", "2024-11-01"),
-            ("GHI789", "Ford", "Ranger", "PickUp", 8000.0, "disponible", "2024-09-20"),
-            ("JKL012", "Chevrolet", "Onix", "Sedan", 4500.0, "disponible", "2024-10-05"),
-            ("MNO345", "Fiat", "Cronos", "Sedan", 4200.0, "disponible", "2024-11-10"),
-            ("PQR678", "Renault", "Kwid", "Hatchback", 3200.0, "disponible", "2024-10-25"),
-            ("STU901", "Peugeot", "208", "Hatchback", 4800.0, "disponible", "2024-09-15"),
-            ("VWX234", "Nissan", "Frontier", "PickUp", 7500.0, "disponible", "2024-11-05"),
-            ("YZA567", "Honda", "Civic", "Sedan", 5500.0, "disponible", "2024-10-20"),
-            ("BCD890", "Hyundai", "HB20", "Hatchback", 4000.0, "disponible", "2024-09-30"),
-        ]
-        # Solo insertar los que faltan
-        vehiculos_a_insertar = todos_vehiculos[count_vehiculos:]
-        if vehiculos_a_insertar:
-            c.executemany(
-                "INSERT INTO vehiculo (patente, marca, modelo, tipo, costo_diario, estado, fecha_ultimo_mantenimiento) VALUES (?,?,?,?,?,?,?)",
-                vehiculos_a_insertar
-            )
+    # Insertar vehículos de prueba (verificando que no existan por patente)
+    # Programación Estructurada - Validación antes de insertar
+    todos_vehiculos = [
+        ("ABC123", "Toyota", "Corolla", "Sedan", 5000.0, "Disponible", "2024-10-15"),
+        ("DEF456", "Volkswagen", "Gol", "Hatchback", 3500.0, "Disponible", "2024-11-01"),
+        ("GHI789", "Ford", "Ranger", "PickUp", 8000.0, "Disponible", "2024-09-20"),
+        ("JKL012", "Chevrolet", "Onix", "Sedan", 4500.0, "Disponible", "2024-10-05"),
+        ("MNO345", "Fiat", "Cronos", "Sedan", 4200.0, "Disponible", "2024-11-10"),
+        ("PQR678", "Renault", "Kwid", "Hatchback", 3200.0, "Disponible", "2024-10-25"),
+        ("STU901", "Peugeot", "208", "Hatchback", 4800.0, "Disponible", "2024-09-15"),
+        ("VWX234", "Nissan", "Frontier", "PickUp", 7500.0, "Disponible", "2024-11-05"),
+        ("YZA567", "Honda", "Civic", "Sedan", 5500.0, "Disponible", "2024-10-20"),
+        ("BCD890", "Hyundai", "HB20", "Hatchback", 4000.0, "Disponible", "2024-09-30"),
+    ]
+    
+    # Obtener patentes existentes
+    c.execute("SELECT patente FROM vehiculo")
+    patentes_existentes = {row[0].upper() for row in c.fetchall()}
+    
+    # Filtrar vehículos que no existen (por patente)
+    vehiculos_a_insertar = [
+        v for v in todos_vehiculos 
+        if v[0].upper() not in patentes_existentes
+    ]
+    
+    if vehiculos_a_insertar:
+        c.executemany(
+            "INSERT INTO vehiculo (patente, marca, modelo, tipo, costo_diario, estado, fecha_ultimo_mantenimiento) VALUES (?,?,?,?,?,?,?)",
+            vehiculos_a_insertar
+        )
 
     # Insertar alquileres de prueba (distribuidos en varios meses) si hay menos de 30
     c.execute("SELECT COUNT(*) FROM alquiler")

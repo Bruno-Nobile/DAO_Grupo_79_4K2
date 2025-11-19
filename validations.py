@@ -34,14 +34,17 @@ def validar_email(email):
 
 
 def validar_patente(patente):
-    """Valida que la patente siga el formato ABC-123 o AB-123-CD"""
+    """
+    Valida que la patente siga el formato ABC123 o AB123CD (sin guiones)
+    Programación Funcional - Uso de expresiones regulares
+    """
     if not patente:
         return False
     patente_limpia = patente.strip().upper()
-    # Formato ABC-123 (3 letras, guión, 3 números)
-    formato1 = re.match(r'^[A-Z]{3}-\d{3}$', patente_limpia)
-    # Formato AB-123-CD (2 letras, guión, 3 números, guión, 2 letras)
-    formato2 = re.match(r'^[A-Z]{2}-\d{3}-[A-Z]{2}$', patente_limpia)
+    # Formato ABC123 (3 letras, 3 números) - sin guiones
+    formato1 = re.match(r'^[A-Z]{3}\d{3}$', patente_limpia)
+    # Formato AB123CD (2 letras, 3 números, 2 letras) - sin guiones
+    formato2 = re.match(r'^[A-Z]{2}\d{3}[A-Z]{2}$', patente_limpia)
     return bool(formato1 or formato2)
 
 

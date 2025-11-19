@@ -26,28 +26,67 @@ class AlquileresTab(ttk.Frame):
         super().__init__(container)
         self.build_ui()
         self.populate()
+        self.populate_mantenimientos()  # Cargar mantenimientos al iniciar
 
     def build_ui(self):
-        """Construye la interfaz de usuario"""
-        top = ttk.Frame(self)
-        top.pack(fill=tk.X, padx=5, pady=5)
+        """
+        Construye la interfaz de usuario
+        Programación Orientada a Objetos - Método de construcción de UI
+        """
+        # Notebook para pestañas (Alquileres y Mantenimientos)
+        # Programación Orientada a Objetos - Uso de Notebook para organización
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        ttk.Button(top, text="Nuevo Alquiler", command=self.nuevo_alquiler).pack(side=tk.LEFT)
-        ttk.Button(top, text="Ver Detalle", command=self.ver_detalle).pack(side=tk.LEFT, padx=5)
-        ttk.Button(top, text="Registrar Multa/Damage", command=self.registrar_multa).pack(side=tk.LEFT, padx=5)
-        ttk.Button(top, text="Registrar Mantenimiento", command=self.registrar_mantenimiento).pack(side=tk.LEFT, padx=5)
-        ttk.Button(top, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
-
+        # Pestaña de Alquileres
+        frame_alquileres = ttk.Frame(self.notebook)
+        self.notebook.add(frame_alquileres, text="Alquileres")
+        
+        # Botones dentro de la pestaña Alquileres
+        # Programación Estructurada - Organización de botones por funcionalidad
+        top_alq = ttk.Frame(frame_alquileres)
+        top_alq.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Button(top_alq, text="Nuevo Alquiler", command=self.nuevo_alquiler).pack(side=tk.LEFT)
+        ttk.Button(top_alq, text="Ver Detalle", command=self.ver_detalle).pack(side=tk.LEFT, padx=5)
+        ttk.Button(top_alq, text="Eliminar", command=self.eliminar_alquiler).pack(side=tk.LEFT, padx=5)
+        ttk.Button(top_alq, text="Registrar Multa/Damage", command=self.registrar_multa).pack(side=tk.LEFT, padx=5)
+        ttk.Button(top_alq, text="Refrescar", command=self.populate).pack(side=tk.RIGHT)
+        
         cols = ("id", "inicio", "fin", "cliente", "vehiculo", "empleado", "costo")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Colored.Treeview")
+        self.tree = ttk.Treeview(frame_alquileres, columns=cols, show="headings", style="Colored.Treeview")
         for c in cols:
             self.tree.heading(c, text=c.capitalize())
             self.tree.column(c, width=130)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         enable_treeview_sorting(self.tree)
+        
+        # Pestaña de Mantenimientos
+        frame_mantenimientos = ttk.Frame(self.notebook)
+        self.notebook.add(frame_mantenimientos, text="Mantenimientos")
+        
+        # Botones dentro de la pestaña Mantenimientos
+        # Programación Estructurada - Organización de botones por funcionalidad
+        top_mant = ttk.Frame(frame_mantenimientos)
+        top_mant.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Button(top_mant, text="Registrar Mantenimiento", command=self.registrar_mantenimiento).pack(side=tk.LEFT)
+        ttk.Button(top_mant, text="Eliminar", command=self.eliminar_mantenimiento).pack(side=tk.LEFT, padx=5)
+        ttk.Button(top_mant, text="Refrescar", command=self.populate_mantenimientos).pack(side=tk.RIGHT)
+        
+        cols_mant = ("id", "tipo", "fecha", "costo", "vehiculo", "observaciones")
+        self.tree_mantenimientos = ttk.Treeview(frame_mantenimientos, columns=cols_mant, show="headings")
+        for c in cols_mant:
+            self.tree_mantenimientos.heading(c, text=c.capitalize())
+            self.tree_mantenimientos.column(c, width=150)
+        self.tree_mantenimientos.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        enable_treeview_sorting(self.tree_mantenimientos)
 
     def populate(self):
-        """Carga los alquileres en la tabla"""
+        """
+        Carga los alquileres en la tabla
+        Programación Estructurada - Función bien organizada
+        """
         for r in self.tree.get_children():
             self.tree.delete(r)
         
@@ -74,7 +113,8 @@ class AlquileresTab(ttk.Frame):
                 row["empleado"],
                 row["costo_total"]
             ))
-        conn.close()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
 
     def nuevo_alquiler(self):
         """Abre diálogo para nuevo alquiler"""
@@ -104,7 +144,8 @@ class AlquileresTab(ttk.Frame):
         
         c.execute("SELECT * FROM multa WHERE id_alquiler = ?", (id_alq,))
         multas = c.fetchall()
-        conn.close()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
         
         txt = (f"Alquiler #{id_alq}\n"
                f"Cliente: {row['cliente']}\n"
@@ -123,8 +164,75 @@ class AlquileresTab(ttk.Frame):
         
         messagebox.showinfo("Detalle Alquiler", txt)
 
+    def eliminar_alquiler(self):
+        """
+        Elimina el alquiler seleccionado
+        Programación Orientada a Objetos - Método de la clase
+        Programación Estructurada - Función bien organizada
+        """
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("Atención", "Seleccione un alquiler para eliminar")
+            return
+        
+        item = self.tree.item(sel[0])["values"]
+        id_alq = item[0]
+        
+        # Confirmar eliminación
+        respuesta = messagebox.askyesno(
+            "Confirmar Eliminación",
+            f"¿Está seguro de que desea eliminar el alquiler #{id_alq}?\n\n"
+            f"Esta acción también eliminará todas las multas asociadas."
+        )
+        
+        if not respuesta:
+            return
+        
+        conn = get_connection()
+        c = conn.cursor()
+        
+        try:
+            # Obtener información del vehículo antes de eliminar el alquiler
+            c.execute("SELECT id_vehiculo FROM alquiler WHERE id_alquiler = ?", (id_alq,))
+            row = c.fetchone()
+            
+            if not row:
+                messagebox.showerror("Error", "Alquiler no encontrado")
+                return
+            
+            id_vehiculo = row["id_vehiculo"]
+            
+            # Eliminar el alquiler (las multas se eliminarán automáticamente por CASCADE)
+            c.execute("DELETE FROM alquiler WHERE id_alquiler = ?", (id_alq,))
+            
+            # Verificar si el vehículo tiene otros alquileres activos
+            c.execute("SELECT COUNT(*) FROM alquiler WHERE id_vehiculo = ?", (id_vehiculo,))
+            otros_alquileres = c.fetchone()[0]
+            
+            # Si no hay otros alquileres y el vehículo estaba "Alquilado", cambiar a "Disponible"
+            if otros_alquileres == 0:
+                c.execute("SELECT estado FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
+                estado_actual = c.fetchone()
+                if estado_actual and estado_actual["estado"] == "Alquilado":
+                    c.execute("UPDATE vehiculo SET estado = 'Disponible' WHERE id_vehiculo = ?", (id_vehiculo,))
+            
+            conn.commit()
+            messagebox.showinfo("Éxito", f"Alquiler #{id_alq} eliminado correctamente")
+            
+            # Refrescar la lista
+            self.populate()
+            
+        except Exception as e:
+            conn.rollback()
+            messagebox.showerror("Error", f"Error al eliminar alquiler: {str(e)}")
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
+
     def registrar_multa(self):
-        """Registra una multa o daño para el alquiler seleccionado"""
+        """
+        Registra una multa o daño para el alquiler seleccionado
+        Programación Orientada a Objetos - Abre diálogo completo
+        """
         sel = self.tree.selection()
         if not sel:
             messagebox.showwarning("Atención", "Seleccione un alquiler")
@@ -133,68 +241,145 @@ class AlquileresTab(ttk.Frame):
         item = self.tree.item(sel[0])["values"]
         id_alq = item[0]
         
-        desc = simpledialog.askstring("Multa/Daño", "Descripción:")
-        if not desc:
-            return
-        
-        monto = simpledialog.askfloat("Multa/Daño", "Monto:")
-        if monto is None:
-            return
+        DialogMulta(self, id_alquiler=id_alq, on_save=self.populate)
+    
+    def populate_mantenimientos(self):
+        """
+        Carga los mantenimientos en la tabla
+        Programación Estructurada - Función bien organizada
+        """
+        for r in self.tree_mantenimientos.get_children():
+            self.tree_mantenimientos.delete(r)
         
         conn = get_connection()
         c = conn.cursor()
-        c.execute("INSERT INTO multa (descripcion, monto, id_alquiler) VALUES (?,?,?)", (desc, monto, id_alq))
-        conn.commit()
-        conn.close()
-        messagebox.showinfo("OK", "Multa registrada")
+        query = """SELECT m.id_mant, m.tipo, m.fecha, m.costo, m.observaciones,
+                          v.patente || ' - ' || v.marca || ' ' || v.modelo AS vehiculo
+                   FROM mantenimiento m
+                   JOIN vehiculo v ON m.id_vehiculo = v.id_vehiculo
+                   ORDER BY m.fecha DESC
+                """
+        c.execute(query)
+        for row in c.fetchall():
+            self.tree_mantenimientos.insert("", tk.END, values=(
+                row["id_mant"],
+                row["tipo"],
+                row["fecha"],
+                row["costo"],
+                row["vehiculo"],
+                row["observaciones"] or ""
+            ))
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
 
     def registrar_mantenimiento(self):
-        """Registra un mantenimiento para un vehículo"""
-        veh = simpledialog.askstring("Mantenimiento", "Patente del vehículo:")
-        if not veh:
+        """
+        Registra un mantenimiento para un vehículo
+        Programación Orientada a Objetos - Abre diálogo completo
+        """
+        DialogMantenimiento(self, on_save=self.populate_mantenimientos)
+    
+    def eliminar_mantenimiento(self):
+        """
+        Elimina el mantenimiento seleccionado
+        Programación Orientada a Objetos - Método de la clase
+        Programación Estructurada - Función bien organizada
+        """
+        sel = self.tree_mantenimientos.selection()
+        if not sel:
+            messagebox.showwarning("Atención", "Seleccione un mantenimiento para eliminar")
+            return
+        
+        item = self.tree_mantenimientos.item(sel[0])["values"]
+        id_mant = item[0]
+        
+        # Confirmar eliminación
+        respuesta = messagebox.askyesno(
+            "Confirmar Eliminación",
+            f"¿Está seguro de que desea eliminar el mantenimiento #{id_mant}?"
+        )
+        
+        if not respuesta:
             return
         
         conn = get_connection()
         c = conn.cursor()
-        c.execute("SELECT id_vehiculo FROM vehiculo WHERE patente = ?", (veh.strip().upper(),))
-        r = c.fetchone()
-        
-        if not r:
-            messagebox.showerror("Error", "Patente no encontrada")
-            conn.close()
-            return
-        
-        idv = r["id_vehiculo"]
-        
-        tipo = simpledialog.askstring("Mantenimiento", "Tipo (preventivo/correctivo):")
-        fecha = simpledialog.askstring("Mantenimiento", "Fecha (YYYY-MM-DD):", initialvalue=str(date.today()))
         
         try:
-            datetime.strptime(fecha, "%Y-%m-%d")
-        except Exception:
-            messagebox.showerror("Error", "Fecha inválida")
-            conn.close()
-            return
-        
-        costo = simpledialog.askfloat("Mantenimiento", "Costo:")
-        obs = simpledialog.askstring("Mantenimiento", "Observaciones (opcional):")
-        
-        c.execute(
-            "INSERT INTO mantenimiento (tipo, fecha, costo, id_vehiculo, observaciones) VALUES (?,?,?,?,?)",
-            (tipo, fecha, costo or 0.0, idv, obs)
-        )
-        c.execute("UPDATE vehiculo SET fecha_ultimo_mantenimiento = ? WHERE id_vehiculo = ?", (fecha, idv))
-        conn.commit()
-        conn.close()
-        messagebox.showinfo("OK", "Mantenimiento registrado")
+            # Obtener información del vehículo antes de eliminar el mantenimiento
+            c.execute("SELECT id_vehiculo FROM mantenimiento WHERE id_mant = ?", (id_mant,))
+            row = c.fetchone()
+            
+            if not row:
+                messagebox.showerror("Error", "Mantenimiento no encontrado")
+                return
+            
+            id_vehiculo = row["id_vehiculo"]
+            
+            # Eliminar el mantenimiento
+            c.execute("DELETE FROM mantenimiento WHERE id_mant = ?", (id_mant,))
+            
+            # Verificar si el vehículo tiene otros mantenimientos
+            # Si no tiene más mantenimientos y estaba en "Mantenimiento", cambiar a "Disponible"
+            c.execute("SELECT COUNT(*) FROM mantenimiento WHERE id_vehiculo = ?", (id_vehiculo,))
+            otros_mantenimientos = c.fetchone()[0]
+            
+            if otros_mantenimientos == 0:
+                c.execute("SELECT estado FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
+                estado_actual = c.fetchone()
+                if estado_actual and estado_actual["estado"] == "Mantenimiento":
+                    # Verificar si tiene alquileres activos antes de cambiar a Disponible
+                    from datetime import date as date_class
+                    fecha_actual = date_class.today().strftime("%Y-%m-%d")
+                    c.execute("""
+                        SELECT COUNT(*) FROM alquiler 
+                        WHERE id_vehiculo = ? 
+                        AND date(fecha_fin) >= date(?)
+                    """, (id_vehiculo, fecha_actual))
+                    alquileres_activos = c.fetchone()[0]
+                    
+                    if alquileres_activos == 0:
+                        c.execute("UPDATE vehiculo SET estado = 'Disponible' WHERE id_vehiculo = ?", (id_vehiculo,))
+                    else:
+                        c.execute("UPDATE vehiculo SET estado = 'Alquilado' WHERE id_vehiculo = ?", (id_vehiculo,))
+            
+            conn.commit()
+            messagebox.showinfo("Éxito", f"Mantenimiento #{id_mant} eliminado correctamente")
+            
+            # Refrescar la lista
+            self.populate_mantenimientos()
+            
+        except Exception as e:
+            conn.rollback()
+            messagebox.showerror("Error", f"Error al eliminar mantenimiento: {str(e)}")
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
 
 
 class DialogNuevoAlquiler(simpledialog.Dialog):
-    """Diálogo para crear un nuevo alquiler"""
+    """
+    Diálogo para crear un nuevo alquiler
+    Programación Orientada a Objetos - Clase de diálogo personalizada
+    """
     
     def __init__(self, parent, on_save=None):
         self.on_save = on_save
+        self._error_occurred = False  # Flag para indicar si hubo error
         super().__init__(parent, "Nuevo Alquiler")
+    
+    def ok(self):
+        """
+        Sobrescribe el método ok para evitar cerrar el diálogo cuando hay errores
+        Programación Orientada a Objetos - Polimorfismo
+        """
+        if not self.validate():
+            return
+        
+        self.apply()
+        
+        # Solo cerrar el diálogo si no hubo error
+        if not self._error_occurred:
+            self.destroy()
 
     def body(self, frame):
         """Construye el formulario"""
@@ -226,7 +411,10 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
         return self.id_cliente
 
     def validate(self):
-        """Valida los datos ingresados"""
+        """
+        Valida los datos ingresados
+        Programación Estructurada - Validación completa
+        """
         # Validar formato de fechas
         try:
             datetime.strptime(self.fecha_inicio.get(), "%Y-%m-%d")
@@ -246,10 +434,45 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
             messagebox.showwarning("Validación", "Cliente y Vehículo son requeridos (ID numérico)")
             return False
         
+        # Validar estado del vehículo antes de permitir el alquiler
+        # Programación Estructurada - Validación de estado
+        try:
+            id_vehiculo = int(self.id_vehiculo.get())
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT estado FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
+            row = c.fetchone()
+            
+            if not row:
+                messagebox.showerror("Validación", "Vehículo no encontrado")
+                return False
+            
+            estado = row["estado"]
+            # Comparación case-insensitive para el estado
+            # Programación Estructurada - Validación de estado
+            if not estado or estado.upper() != "DISPONIBLE":
+                messagebox.showerror("Validación", 
+                                  f"El vehículo no está disponible para alquilar. "
+                                  f"Estado actual: {estado}. "
+                                  f"Solo se pueden alquilar vehículos en estado 'Disponible'.")
+                return False
+        except ValueError:
+            messagebox.showerror("Validación", "ID de vehículo inválido")
+            return False
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al validar vehículo: {str(e)}")
+            return False
+        
         return True
 
     def apply(self):
-        """Guarda el alquiler en la base de datos"""
+        """
+        Guarda el alquiler en la base de datos
+        Programación Estructurada - Manejo de errores
+        No cierra el diálogo si hay errores
+        """
+        self._error_occurred = False  # Resetear flag de error
+        
         try:
             id_cliente = int(self.id_cliente.get())
             id_vehiculo = int(self.id_vehiculo.get())
@@ -260,7 +483,257 @@ class DialogNuevoAlquiler(simpledialog.Dialog):
             
             if self.on_save:
                 self.on_save()
+            
+            # Si llegamos aquí, no hubo error, el diálogo se cerrará
+            self._error_occurred = False
+            
         except ValueError as e:
+            # Los mensajes de ValueError ya son claros (Cliente no encontrado, Empleado no encontrado, etc.)
+            self._error_occurred = True  # Marcar que hubo error
             messagebox.showerror("Error", str(e))
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            # Capturar errores de FOREIGN KEY y mostrar mensajes más claros
+            self._error_occurred = True  # Marcar que hubo error
+            error_msg = str(e)
+            if "FOREIGN KEY" in error_msg or "constraint" in error_msg.lower():
+                # Intentar determinar qué entidad falta
+                if "cliente" in error_msg.lower() or "id_cliente" in error_msg.lower():
+                    messagebox.showerror("Error", "Cliente no encontrado.")
+                elif "empleado" in error_msg.lower() or "id_empleado" in error_msg.lower():
+                    messagebox.showerror("Error", "Empleado no encontrado.")
+                elif "vehiculo" in error_msg.lower() or "id_vehiculo" in error_msg.lower():
+                    messagebox.showerror("Error", "Vehículo no encontrado.")
+                else:
+                    messagebox.showerror("Error", "Error de referencia: Verifique que el cliente, vehículo y empleado (si se especificó) existan.")
+            else:
+                messagebox.showerror("Error", str(e))
+
+
+class DialogMulta(simpledialog.Dialog):
+    """
+    Diálogo completo para registrar multa/damage
+    Programación Orientada a Objetos - Clase de diálogo
+    """
+    
+    def __init__(self, parent, id_alquiler, on_save=None):
+        self.id_alquiler = id_alquiler
+        self.on_save = on_save
+        super().__init__(parent, "Registrar Multa/Damage")
+    
+    def body(self, frame):
+        """
+        Construye el formulario completo
+        Programación Estructurada - Formulario bien organizado
+        """
+        ttk.Label(frame, text="Descripción:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.descripcion = tk.Text(frame, height=4, width=40)
+        self.descripcion.grid(row=0, column=1, pady=5, padx=5)
+        
+        ttk.Label(frame, text="Monto ($):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.monto = ttk.Entry(frame)
+        self.monto.grid(row=1, column=1, pady=5, padx=5, sticky=tk.EW)
+        
+        frame.columnconfigure(1, weight=1)
+        return self.descripcion
+    
+    def validate(self):
+        """
+        Valida los datos ingresados
+        Programación Estructurada - Validación
+        """
+        if not self.descripcion.get("1.0", tk.END).strip():
+            messagebox.showwarning("Validación", "La descripción es requerida")
+            return False
+        
+        try:
+            monto = float(self.monto.get())
+            if monto < 0:
+                messagebox.showwarning("Validación", "El monto debe ser mayor o igual a 0")
+                return False
+        except ValueError:
+            messagebox.showwarning("Validación", "El monto debe ser un número válido")
+            return False
+        
+        return True
+    
+    def apply(self):
+        """
+        Guarda la multa en la base de datos
+        Programación Estructurada - Persistencia
+        """
+        conn = get_connection()
+        c = conn.cursor()
+        descripcion = self.descripcion.get("1.0", tk.END).strip()
+        monto = float(self.monto.get())
+        
+        c.execute("INSERT INTO multa (descripcion, monto, id_alquiler) VALUES (?,?,?)", 
+                 (descripcion, monto, self.id_alquiler))
+        conn.commit()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
+        
+        messagebox.showinfo("OK", "Multa registrada exitosamente")
+        
+        if self.on_save:
+            self.on_save()
+
+
+class DialogMantenimiento(simpledialog.Dialog):
+    """
+    Diálogo completo para registrar mantenimiento
+    Programación Orientada a Objetos - Clase de diálogo
+    """
+    
+    def __init__(self, parent, on_save=None):
+        self.on_save = on_save
+        super().__init__(parent, "Registrar Mantenimiento")
+    
+    def body(self, frame):
+        """
+        Construye el formulario completo
+        Programación Estructurada - Formulario bien organizado
+        """
+        ttk.Label(frame, text="Patente del vehículo:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.patente = ttk.Entry(frame)
+        self.patente.grid(row=0, column=1, pady=5, padx=5, sticky=tk.EW)
+        
+        ttk.Label(frame, text="Tipo:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.tipo = ttk.Combobox(frame, values=["preventivo", "correctivo"], state="readonly")
+        self.tipo.grid(row=1, column=1, pady=5, padx=5, sticky=tk.EW)
+        self.tipo.current(0)
+        
+        ttk.Label(frame, text="Fecha (YYYY-MM-DD):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.fecha = ttk.Entry(frame)
+        self.fecha.insert(0, str(date.today()))
+        self.fecha.grid(row=2, column=1, pady=5, padx=5, sticky=tk.EW)
+        
+        ttk.Label(frame, text="Costo ($):").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.costo = ttk.Entry(frame)
+        self.costo.insert(0, "0.0")
+        self.costo.grid(row=3, column=1, pady=5, padx=5, sticky=tk.EW)
+        
+        ttk.Label(frame, text="Observaciones:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        self.observaciones = tk.Text(frame, height=4, width=40)
+        self.observaciones.grid(row=4, column=1, pady=5, padx=5)
+        
+        frame.columnconfigure(1, weight=1)
+        return self.patente
+    
+    def validate(self):
+        """
+        Valida los datos ingresados
+        Programación Estructurada - Validación completa
+        """
+        if not self.patente.get().strip():
+            messagebox.showwarning("Validación", "La patente es requerida")
+            return False
+        
+        if not self.tipo.get():
+            messagebox.showwarning("Validación", "El tipo es requerido")
+            return False
+        
+        try:
+            datetime.strptime(self.fecha.get(), "%Y-%m-%d")
+        except Exception:
+            messagebox.showerror("Validación", "Fecha inválida (usar formato YYYY-MM-DD)")
+            return False
+        
+        try:
+            costo = float(self.costo.get())
+            if costo < 0:
+                messagebox.showwarning("Validación", "El costo debe ser mayor o igual a 0")
+                return False
+        except ValueError:
+            messagebox.showwarning("Validación", "El costo debe ser un número válido")
+            return False
+        
+        # Validar que el vehículo no esté alquilado
+        # Programación Estructurada - Validación de estado del vehículo
+        conn = get_connection()
+        c = conn.cursor()
+        
+        patente = self.patente.get().strip().upper()
+        c.execute("SELECT id_vehiculo, estado FROM vehiculo WHERE patente = ?", (patente,))
+        row = c.fetchone()
+        
+        if not row:
+            messagebox.showerror("Validación", "Patente no encontrada")
+            return False
+        
+        id_vehiculo = row["id_vehiculo"]
+        estado = row["estado"]
+        
+        # Verificar que el vehículo no esté en estado "Alquilado"
+        if estado and estado.upper() == "ALQUILADO":
+            messagebox.showerror("Validación", 
+                                f"No se puede realizar mantenimiento en un vehículo que está alquilado. "
+                                f"Estado actual: {estado}. "
+                                f"El vehículo debe estar disponible o en mantenimiento.")
+            return False
+        
+        # Verificar que no tenga alquileres activos (por si acaso el estado no está actualizado)
+        # Programación Estructurada - Validación de alquileres activos
+        fecha_actual = date.today().strftime("%Y-%m-%d")
+        c.execute("""
+            SELECT COUNT(*) FROM alquiler 
+            WHERE id_vehiculo = ? 
+            AND date(fecha_fin) >= date(?)
+        """, (id_vehiculo, fecha_actual))
+        
+        alquileres_activos = c.fetchone()[0]
+        if alquileres_activos > 0:
+            messagebox.showerror("Validación", 
+                                f"No se puede realizar mantenimiento en un vehículo que tiene alquileres activos. "
+                                f"El vehículo tiene {alquileres_activos} alquiler(es) activo(s). "
+                                f"Espere a que finalicen los alquileres antes de realizar el mantenimiento.")
+            return False
+        
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
+        
+        return True
+    
+    def apply(self):
+        """
+        Guarda el mantenimiento en la base de datos
+        Programación Estructurada - Persistencia
+        """
+        conn = get_connection()
+        c = conn.cursor()
+        
+        # Buscar vehículo por patente
+        patente = self.patente.get().strip().upper()
+        c.execute("SELECT id_vehiculo FROM vehiculo WHERE patente = ?", (patente,))
+        r = c.fetchone()
+        
+        if not r:
+            messagebox.showerror("Error", "Patente no encontrada")
+            # No cerrar la conexión - el Singleton la maneja por thread
+            # conn.close()  # Removido para evitar cerrar conexión compartida
+            return
+        
+        id_vehiculo = r["id_vehiculo"]
+        tipo = self.tipo.get()
+        fecha = self.fecha.get()
+        costo = float(self.costo.get())
+        observaciones = self.observaciones.get("1.0", tk.END).strip()
+        
+        # Insertar mantenimiento
+        c.execute(
+            "INSERT INTO mantenimiento (tipo, fecha, costo, id_vehiculo, observaciones) VALUES (?,?,?,?,?)",
+            (tipo, fecha, costo, id_vehiculo, observaciones if observaciones else None)
+        )
+        
+        # Actualizar fecha último mantenimiento y estado del vehículo a "Mantenimiento"
+        # Programación Estructurada - Actualización de estado del vehículo
+        c.execute("UPDATE vehiculo SET fecha_ultimo_mantenimiento = ?, estado = 'Mantenimiento' WHERE id_vehiculo = ?", 
+                 (fecha, id_vehiculo))
+        
+        conn.commit()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
+        
+        messagebox.showinfo("OK", "Mantenimiento registrado exitosamente. El vehículo ahora está en estado 'Mantenimiento'.")
+        
+        if self.on_save:
+            self.on_save()

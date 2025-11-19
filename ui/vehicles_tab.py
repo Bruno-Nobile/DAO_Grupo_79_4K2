@@ -63,7 +63,8 @@ class VehiculosTab(ttk.Frame):
                 row["estado"],
                 row["fecha_ultimo_mantenimiento"]
             ))
-        conn.close()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
 
     def nuevo(self):
         """Abre diálogo para nuevo vehículo"""
@@ -108,7 +109,8 @@ class VehiculosTab(ttk.Frame):
             mensaje += f"\nSe eliminarán {mantenimientos} mantenimiento(s) registrados."
 
         if not messagebox.askyesno("Confirmar", mensaje):
-            conn.close()
+            # No cerrar la conexión - el Singleton la maneja por thread
+            # conn.close()  # Removido para evitar cerrar conexión compartida
             return
 
         try:
@@ -121,8 +123,9 @@ class VehiculosTab(ttk.Frame):
         except sqlite3.IntegrityError as e:
             conn.rollback()
             messagebox.showerror("Error", f"No se puede eliminar: {e}")
-        finally:
-            conn.close()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # finally:
+        #     conn.close()  # Removido para evitar cerrar conexión compartida
         self.populate()
 
 
@@ -135,7 +138,10 @@ class DatosVehiculoDialog(simpledialog.Dialog):
         super().__init__(parent, title)
 
     def body(self, frame):
-        """Construye el formulario"""
+        """
+        Construye el formulario
+        Programación Orientada a Objetos - Construcción de UI
+        """
         labels = [
             "Patente:", "Marca:", "Modelo:", "Tipo:", "Costo diario:",
             "Estado:", "Fecha último mant (YYYY-MM-DD):"
@@ -143,17 +149,26 @@ class DatosVehiculoDialog(simpledialog.Dialog):
         self.entries = {}
         
         for i, label in enumerate(labels):
-            ttk.Label(frame, text=label).grid(row=i, column=0, sticky=tk.W)
-            e = ttk.Entry(frame)
-            e.grid(row=i, column=1)
+            ttk.Label(frame, text=label).grid(row=i, column=0, sticky=tk.W, pady=2)
+            if label == "Estado:":
+                # Programación Orientada a Objetos - Uso de Combobox para estado
+                e = ttk.Combobox(frame, values=["Disponible", "Alquilado", "Mantenimiento"], 
+                                state="readonly", width=18)
+                e.set("Disponible")  # Valor por defecto
+            else:
+                e = ttk.Entry(frame)
+            e.grid(row=i, column=1, pady=2, padx=5, sticky=tk.EW)
             self.entries[label] = e
+        
+        frame.columnconfigure(1, weight=1)
 
         if self.id_vehiculo:
             conn = get_connection()
             c = conn.cursor()
             c.execute("SELECT * FROM vehiculo WHERE id_vehiculo = ?", (self.id_vehiculo,))
             row = c.fetchone()
-            conn.close()
+            # No cerrar la conexión - el Singleton la maneja por thread
+            # conn.close()  # Removido para evitar cerrar conexión compartida
             
             if row:
                 self.entries["Patente:"].insert(0, row["patente"])
@@ -161,7 +176,12 @@ class DatosVehiculoDialog(simpledialog.Dialog):
                 self.entries["Modelo:"].insert(0, row["modelo"])
                 self.entries["Tipo:"].insert(0, row["tipo"])
                 self.entries["Costo diario:"].insert(0, str(row["costo_diario"]))
-                self.entries["Estado:"].insert(0, row["estado"])
+                # Establecer el estado en el combobox
+                estado_actual = row["estado"] or "Disponible"
+                if estado_actual in ["Disponible", "Alquilado", "Mantenimiento"]:
+                    self.entries["Estado:"].set(estado_actual)
+                else:
+                    self.entries["Estado:"].set("Disponible")
                 if row["fecha_ultimo_mantenimiento"]:
                     self.entries["Fecha último mant (YYYY-MM-DD):"].insert(0, row["fecha_ultimo_mantenimiento"])
         
@@ -176,7 +196,7 @@ class DatosVehiculoDialog(simpledialog.Dialog):
             return False
         
         if not validar_patente(patente):
-            messagebox.showerror("Validación", "La patente debe seguir el formato ABC-123 o AB-123-CD")
+            messagebox.showerror("Validación", "La patente debe seguir el formato ABC123 o AB123CD (sin guiones)")
             return False
         
         # Validar fecha de mantenimiento
@@ -195,12 +215,17 @@ class DatosVehiculoDialog(simpledialog.Dialog):
         return True
 
     def apply(self):
-        """Guarda los datos en la base de datos"""
-        values = {k: v.get().strip() for k, v in self.entries.items()}
+        """
+        Guarda los datos en la base de datos
+        Programación Estructurada - Persistencia
+        """
+        values = {k: v.get().strip() if hasattr(v, 'get') else str(v.get()) for k, v in self.entries.items()}
         
         # Normalizar patente a mayúsculas
         patente = values["Patente:"].upper()
         fecha_mant = values["Fecha último mant (YYYY-MM-DD):"] or None
+        # Obtener estado del combobox
+        estado = self.entries["Estado:"].get()
         
         conn = get_connection()
         c = conn.cursor()
@@ -212,7 +237,7 @@ class DatosVehiculoDialog(simpledialog.Dialog):
                        costo_diario=?, estado=?, fecha_ultimo_mantenimiento=? 
                        WHERE id_vehiculo=?""",
                     (patente, values["Marca:"], values["Modelo:"],
-                     values["Tipo:"], float(values["Costo diario:"]), values["Estado:"],
+                     values["Tipo:"], float(values["Costo diario:"]), estado,
                      fecha_mant, self.id_vehiculo)
                 )
             except sqlite3.IntegrityError as e:
@@ -223,14 +248,15 @@ class DatosVehiculoDialog(simpledialog.Dialog):
                     """INSERT INTO vehiculo (patente, marca, modelo, tipo, costo_diario, 
                        estado, fecha_ultimo_mantenimiento) VALUES (?,?,?,?,?,?,?)""",
                     (patente, values["Marca:"], values["Modelo:"],
-                     values["Tipo:"], float(values["Costo diario:"]), values["Estado:"],
+                     values["Tipo:"], float(values["Costo diario:"]), estado,
                      fecha_mant)
                 )
             except sqlite3.IntegrityError as e:
                 messagebox.showerror("Error", f"No se pudo insertar: {e}")
         
         conn.commit()
-        conn.close()
+        # No cerrar la conexión - el Singleton la maneja por thread
+        # conn.close()  # Removido para evitar cerrar conexión compartida
         
         if self.on_save:
             self.on_save()

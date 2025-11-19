@@ -23,7 +23,7 @@ DAO_Grupo_79_4K2/
 │   ├── observer.py       # Patrón Observer
 │   └── factory.py        # Patrón Factory
 ├── services/             # Servicios de negocio
-│   └── alquiler_service.py  # Lógica de negocio (OOP)
+│   └── reportes_service.py  # Servicio de reportes (OOP)
 └── validations.py        # Validaciones (Programación Funcional)
 ```
 
@@ -146,7 +146,8 @@ class AlquilerNotifier(Subject):
 ```
 
 **Uso**: 
-- `services/alquiler_service.py`: Usa `AlquilerNotifier` para notificar eventos
+- Los patrones están implementados y disponibles para uso futuro
+- Actualmente el código usa directamente `models.registrar_alquiler()` y `database.get_connection()`
 - Observadores: `LogObserver`, `EmailObserver` implementan la interfaz `Observer`
 
 #### Patrón Factory
@@ -170,8 +171,9 @@ class DAOFactory:
         return DAOFactory._daos['cliente']
 ```
 
-**Uso**:
-- `services/alquiler_service.py`: Usa `EntityFactory.create_alquiler()` para crear entidades
+**Uso**: 
+- Los patrones están implementados y disponibles para uso futuro
+- Actualmente el código crea entidades directamente usando constructores
 - Los DAOs pueden obtenerse mediante `DAOFactory.get_cliente_dao()`
 
 ## 📝 Ejemplos de Uso
@@ -206,19 +208,16 @@ print(cliente.tipo_persona())     # "Cliente"
 print(empleado.tipo_persona())    # "Empleado"
 ```
 
-### Ejemplo 3: Usar Observer Pattern
+### Ejemplo 3: Usar Reportes Service
 ```python
-from services.alquiler_service import AlquilerService
-from patterns.observer import LogObserver, EmailObserver
+from services.reportes_service import ReportesService
 
-service = AlquilerService()
+# Patrón Singleton - El servicio usa DatabaseConnection internamente
+reportes_service = ReportesService()
 
-# Patrón Observer - Agregar observadores
-service.agregar_observador(LogObserver())
-service.agregar_observador(EmailObserver())
-
-# Al crear un alquiler, se notifica a todos los observadores
-alquiler = service.registrar_alquiler("2024-12-25", "2024-12-30", 1, 1)
+# Obtener reportes
+alquileres_por_cliente = reportes_service.alquileres_por_cliente()
+vehiculos_mas_alquilados = reportes_service.vehiculos_mas_alquilados()
 ```
 
 ## 🔍 Búsqueda de Conceptos
@@ -226,8 +225,8 @@ alquiler = service.registrar_alquiler("2024-12-25", "2024-12-30", 1, 1)
 Para encontrar dónde está aplicado cada concepto, busca en el código:
 
 - **"Patrón Singleton"**: `persistence/database_connection.py`
-- **"Patrón Observer"**: `patterns/observer.py`, `services/alquiler_service.py`
-- **"Patrón Factory"**: `patterns/factory.py`, `services/alquiler_service.py`
+- **"Patrón Observer"**: `patterns/observer.py` (implementado, disponible para uso futuro)
+- **"Patrón Factory"**: `patterns/factory.py` (implementado, disponible para uso futuro)
 - **"Herencia y Polimorfismo"**: `entities/persona.py`, `entities/cliente.py`, `entities/empleado.py`
 - **"Persistencia"**: Todo el directorio `persistence/`
 - **"Programación Funcional"**: `persistence/*_dao.py` (métodos `list_all`), `patterns/observer.py`

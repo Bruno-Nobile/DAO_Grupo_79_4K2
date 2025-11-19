@@ -50,7 +50,7 @@ class ReportesTab(ttk.Frame):
 
     def _build_clientes_section(self):
         frame = ttk.Frame(self.nb)
-        self.nb.add(frame, text="Por cliente")
+        self.nb.add(frame, text="Alquiler por cliente")
 
         controls = ttk.Frame(frame)
         controls.pack(fill=tk.X, padx=5, pady=5)
