@@ -356,8 +356,42 @@ class ReportesTab(ttk.Frame):
         labels = [d[0] for d in datos_filtrados]
         valores = [d[1] for d in datos_filtrados]
 
+        # Paleta de colores amplia para evitar repeticiones
+        # Usamos varios colormaps combinados para tener más variedad
+        import matplotlib.cm as cm
+        
+        n_colores = len(valores)
+        colores = []
+        
+        # Combinar múltiples colormaps para tener una paleta amplia
+        # tab20 tiene 20 colores distintos, Set3 tiene 12, Pastel1 y Pastel2 tienen 8 cada uno
+        cmap1 = plt.get_cmap('tab20')
+        cmap2 = plt.get_cmap('Set3')
+        cmap3 = plt.get_cmap('Pastel1')
+        cmap4 = plt.get_cmap('Pastel2')
+        cmap5 = plt.get_cmap('Set1')
+        cmap6 = plt.get_cmap('Set2')
+        
+        # Generar colores de diferentes colormaps para máxima variedad
+        for i in range(n_colores):
+            if i < 20:
+                # Usar índices discretos para tab20 (tiene exactamente 20 colores)
+                colores.append(cmap1(i % 20))
+            elif i < 32:
+                colores.append(cmap2((i - 20) % 12))
+            elif i < 40:
+                colores.append(cmap3((i - 32) % 8))
+            elif i < 48:
+                colores.append(cmap4((i - 40) % 8))
+            elif i < 57:
+                colores.append(cmap5((i - 48) % 9))
+            else:
+                colores.append(cmap6((i - 57) % 8))
+
         fig, ax = plt.subplots(figsize=(6, 5))
-        wedges, texts, autotexts = ax.pie(valores, labels=labels, startangle=90, wedgeprops=dict(width=0.4), autopct='%1.1f%%')
+        wedges, texts, autotexts = ax.pie(valores, labels=labels, startangle=90, 
+                                         wedgeprops=dict(width=0.4), autopct='%1.1f%%',
+                                         colors=colores)
         ax.set_aspect('equal')
         ax.set_title("Vehículos más alquilados (anillo)")
 
