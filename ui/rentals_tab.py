@@ -214,7 +214,15 @@ class AlquileresTab(ttk.Frame):
             c.execute("DELETE FROM alquiler WHERE id_alquiler = ?", (id_alq,))
             
             # Verificar si el vehículo tiene otros alquileres activos
-            c.execute("SELECT COUNT(*) FROM alquiler WHERE id_vehiculo = ?", (id_vehiculo,))
+            # Un alquiler está activo si: fecha_inicio <= fecha_actual <= fecha_fin
+            from datetime import date as date_class
+            fecha_actual = date_class.today().strftime("%Y-%m-%d")
+            c.execute("""
+                SELECT COUNT(*) FROM alquiler 
+                WHERE id_vehiculo = ? 
+                AND date(fecha_inicio) <= date(?)
+                AND date(fecha_fin) >= date(?)
+            """, (id_vehiculo, fecha_actual, fecha_actual))
             otros_alquileres = c.fetchone()[0]
             
             # Si no hay otros alquileres y el vehículo estaba "Alquilado", cambiar a "Disponible"
@@ -344,11 +352,13 @@ class AlquileresTab(ttk.Frame):
                 estado_actual = c.fetchone()
                 if estado_actual and estado_actual["estado"] == "Mantenimiento":
                     # Verificar si tiene alquileres activos antes de cambiar a Disponible
+                    # Un alquiler está activo si: fecha_inicio <= fecha_actual <= fecha_fin
                     c.execute("""
                         SELECT COUNT(*) FROM alquiler 
                         WHERE id_vehiculo = ? 
+                        AND date(fecha_inicio) <= date(?)
                         AND date(fecha_fin) >= date(?)
-                    """, (id_vehiculo, fecha_actual))
+                    """, (id_vehiculo, fecha_actual, fecha_actual))
                     alquileres_activos = c.fetchone()[0]
                     
                     if alquileres_activos == 0:
@@ -696,12 +706,14 @@ class DialogMantenimiento(simpledialog.Dialog):
         
         # Verificar que no tenga alquileres activos (por si acaso el estado no está actualizado)
         # Programación Estructurada - Validación de alquileres activos
+        # Un alquiler está activo si: fecha_inicio <= fecha_actual <= fecha_fin
         fecha_actual = date.today().strftime("%Y-%m-%d")
         c.execute("""
             SELECT COUNT(*) FROM alquiler 
             WHERE id_vehiculo = ? 
+            AND date(fecha_inicio) <= date(?)
             AND date(fecha_fin) >= date(?)
-        """, (id_vehiculo, fecha_actual))
+        """, (id_vehiculo, fecha_actual, fecha_actual))
         
         alquileres_activos = c.fetchone()[0]
         if alquileres_activos > 0:

@@ -133,8 +133,16 @@ def registrar_alquiler(fecha_inicio, fecha_fin, id_cliente, id_vehiculo, id_empl
             (fecha_inicio, fecha_fin, costo_total, id_cliente, id_vehiculo, id_empleado)
         )
         
-        # Actualizar estado del vehículo a "Alquilado"
-        c.execute("UPDATE vehiculo SET estado = 'Alquilado' WHERE id_vehiculo = ?", (id_vehiculo,))
+        # Actualizar estado del vehículo solo si el alquiler ya comenzó (fecha_inicio <= fecha_actual)
+        # Si es una fecha futura, el estado se actualizará automáticamente cuando llegue la fecha
+        fecha_inicio_date = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        fecha_actual = date.today()
+        
+        if fecha_inicio_date <= fecha_actual:
+            # El alquiler ya comenzó o comienza hoy, marcar como "Alquilado"
+            c.execute("UPDATE vehiculo SET estado = 'Alquilado' WHERE id_vehiculo = ?", (id_vehiculo,))
+        # Si fecha_inicio_date > fecha_actual, el vehículo permanece "Disponible"
+        # y se actualizará automáticamente cuando llegue la fecha de inicio
         
         conn.commit()
         # No cerrar la conexión - el Singleton la maneja por thread
@@ -191,12 +199,15 @@ def actualizar_estados_vehiculos(fecha_referencia=None):
             modelo = vehiculo["modelo"]
             estado_actual = vehiculo["estado"]
             
-            # Verificar si tiene alquileres activos (fecha_fin >= fecha_referencia)
+            # Verificar si tiene alquileres activos
+            # Un alquiler está activo si: fecha_inicio <= fecha_referencia <= fecha_fin
+            # Es decir, el alquiler ya comenzó y aún no terminó
             c.execute("""
                 SELECT COUNT(*) FROM alquiler 
                 WHERE id_vehiculo = ? 
+                AND date(fecha_inicio) <= date(?)
                 AND date(fecha_fin) >= date(?)
-            """, (id_vehiculo, fecha_ref_str))
+            """, (id_vehiculo, fecha_ref_str, fecha_ref_str))
             
             alquileres_activos = c.fetchone()[0]
             
