@@ -95,13 +95,57 @@ def init_db():
     CREATE TABLE IF NOT EXISTS mantenimiento (
         id_mant INTEGER PRIMARY KEY AUTOINCREMENT,
         tipo TEXT,
-        fecha TEXT NOT NULL,
+        fecha_inicio TEXT NOT NULL,
+        fecha_fin TEXT NOT NULL,
         costo REAL,
         id_vehiculo INTEGER NOT NULL,
         observaciones TEXT,
         FOREIGN KEY(id_vehiculo) REFERENCES vehiculo(id_vehiculo) ON DELETE CASCADE
     );
     """)
+    
+    # Migración: Si existe la columna 'fecha' antigua, migrar a fecha_inicio y fecha_fin
+    try:
+        c.execute("PRAGMA table_info(mantenimiento)")
+        columnas = [col[1] for col in c.fetchall()]
+        
+        if 'fecha' in columnas and 'fecha_inicio' not in columnas:
+            # Migrar datos: agregar columnas nuevas
+            c.execute("ALTER TABLE mantenimiento ADD COLUMN fecha_inicio TEXT")
+            c.execute("ALTER TABLE mantenimiento ADD COLUMN fecha_fin TEXT")
+            
+            # Copiar fecha a fecha_inicio y fecha_fin
+            c.execute("UPDATE mantenimiento SET fecha_inicio = fecha, fecha_fin = fecha WHERE fecha_inicio IS NULL")
+            
+            # Eliminar columna antigua (SQLite no soporta DROP COLUMN directamente)
+            # En su lugar, creamos una nueva tabla y copiamos los datos
+            c.execute("""
+                CREATE TABLE mantenimiento_new (
+                    id_mant INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tipo TEXT,
+                    fecha_inicio TEXT NOT NULL,
+                    fecha_fin TEXT NOT NULL,
+                    costo REAL,
+                    id_vehiculo INTEGER NOT NULL,
+                    observaciones TEXT,
+                    FOREIGN KEY(id_vehiculo) REFERENCES vehiculo(id_vehiculo) ON DELETE CASCADE
+                )
+            """)
+            
+            c.execute("""
+                INSERT INTO mantenimiento_new 
+                (id_mant, tipo, fecha_inicio, fecha_fin, costo, id_vehiculo, observaciones)
+                SELECT id_mant, tipo, fecha_inicio, fecha_fin, costo, id_vehiculo, observaciones
+                FROM mantenimiento
+            """)
+            
+            c.execute("DROP TABLE mantenimiento")
+            c.execute("ALTER TABLE mantenimiento_new RENAME TO mantenimiento")
+            
+            conn.commit()
+    except Exception as e:
+        # Si hay error en la migración, continuar (puede que ya esté migrado)
+        pass
     
     conn.commit()
     conn.close()

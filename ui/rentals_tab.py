@@ -14,7 +14,7 @@ import os
 # Agregar directorio padre al path para imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
-from models import registrar_alquiler
+from models import registrar_alquiler, actualizar_estados_vehiculos
 from validations import validar_fecha_inicio_alquiler
 from .ui_utils import enable_treeview_sorting
 
@@ -74,7 +74,7 @@ class AlquileresTab(ttk.Frame):
         ttk.Button(top_mant, text="Eliminar", command=self.eliminar_mantenimiento).pack(side=tk.LEFT, padx=5)
         ttk.Button(top_mant, text="Refrescar", command=self.populate_mantenimientos).pack(side=tk.RIGHT)
         
-        cols_mant = ("id", "tipo", "fecha", "costo", "vehiculo", "observaciones")
+        cols_mant = ("id", "tipo", "fechas", "costo", "vehiculo", "observaciones")
         self.tree_mantenimientos = ttk.Treeview(frame_mantenimientos, columns=cols_mant, show="headings")
         for c in cols_mant:
             self.tree_mantenimientos.heading(c, text=c.capitalize())
@@ -86,7 +86,15 @@ class AlquileresTab(ttk.Frame):
         """
         Carga los alquileres en la tabla
         Programación Estructurada - Función bien organizada
+        Actualiza automáticamente los estados de vehículos antes de mostrar los datos
         """
+        # Actualizar estados de vehículos antes de mostrar (para reflejar cambios de fechas)
+        try:
+            actualizar_estados_vehiculos()
+        except Exception:
+            # Si hay error, continuar de todas formas
+            pass
+        
         for r in self.tree.get_children():
             self.tree.delete(r)
         
@@ -253,18 +261,18 @@ class AlquileresTab(ttk.Frame):
         
         conn = get_connection()
         c = conn.cursor()
-        query = """SELECT m.id_mant, m.tipo, m.fecha, m.costo, m.observaciones,
+        query = """SELECT m.id_mant, m.tipo, m.fecha_inicio, m.fecha_fin, m.costo, m.observaciones,
                           v.patente || ' - ' || v.marca || ' ' || v.modelo AS vehiculo
                    FROM mantenimiento m
                    JOIN vehiculo v ON m.id_vehiculo = v.id_vehiculo
-                   ORDER BY m.fecha DESC
+                   ORDER BY m.fecha_inicio DESC
                 """
         c.execute(query)
         for row in c.fetchall():
             self.tree_mantenimientos.insert("", tk.END, values=(
                 row["id_mant"],
                 row["tipo"],
-                row["fecha"],
+                f"{row['fecha_inicio']} - {row['fecha_fin']}",
                 row["costo"],
                 row["vehiculo"],
                 row["observaciones"] or ""
@@ -319,18 +327,23 @@ class AlquileresTab(ttk.Frame):
             # Eliminar el mantenimiento
             c.execute("DELETE FROM mantenimiento WHERE id_mant = ?", (id_mant,))
             
-            # Verificar si el vehículo tiene otros mantenimientos
-            # Si no tiene más mantenimientos y estaba en "Mantenimiento", cambiar a "Disponible"
-            c.execute("SELECT COUNT(*) FROM mantenimiento WHERE id_vehiculo = ?", (id_vehiculo,))
-            otros_mantenimientos = c.fetchone()[0]
+            # Verificar si el vehículo tiene otros mantenimientos activos
+            # Si no tiene más mantenimientos activos y estaba en "Mantenimiento", actualizar estado
+            from datetime import date as date_class
+            fecha_actual = date_class.today().strftime("%Y-%m-%d")
             
-            if otros_mantenimientos == 0:
+            c.execute("""
+                SELECT COUNT(*) FROM mantenimiento 
+                WHERE id_vehiculo = ? 
+                AND date(fecha_fin) >= date(?)
+            """, (id_vehiculo, fecha_actual))
+            otros_mantenimientos_activos = c.fetchone()[0]
+            
+            if otros_mantenimientos_activos == 0:
                 c.execute("SELECT estado FROM vehiculo WHERE id_vehiculo = ?", (id_vehiculo,))
                 estado_actual = c.fetchone()
                 if estado_actual and estado_actual["estado"] == "Mantenimiento":
                     # Verificar si tiene alquileres activos antes de cambiar a Disponible
-                    from datetime import date as date_class
-                    fecha_actual = date_class.today().strftime("%Y-%m-%d")
                     c.execute("""
                         SELECT COUNT(*) FROM alquiler 
                         WHERE id_vehiculo = ? 
@@ -602,19 +615,24 @@ class DialogMantenimiento(simpledialog.Dialog):
         self.tipo.grid(row=1, column=1, pady=5, padx=5, sticky=tk.EW)
         self.tipo.current(0)
         
-        ttk.Label(frame, text="Fecha (YYYY-MM-DD):").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.fecha = ttk.Entry(frame)
-        self.fecha.insert(0, str(date.today()))
-        self.fecha.grid(row=2, column=1, pady=5, padx=5, sticky=tk.EW)
+        ttk.Label(frame, text="Fecha inicio (YYYY-MM-DD):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.fecha_inicio = ttk.Entry(frame)
+        self.fecha_inicio.insert(0, str(date.today()))
+        self.fecha_inicio.grid(row=2, column=1, pady=5, padx=5, sticky=tk.EW)
         
-        ttk.Label(frame, text="Costo ($):").grid(row=3, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text="Fecha fin (YYYY-MM-DD):").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.fecha_fin = ttk.Entry(frame)
+        self.fecha_fin.insert(0, str(date.today()))
+        self.fecha_fin.grid(row=3, column=1, pady=5, padx=5, sticky=tk.EW)
+        
+        ttk.Label(frame, text="Costo ($):").grid(row=4, column=0, sticky=tk.W, pady=5)
         self.costo = ttk.Entry(frame)
         self.costo.insert(0, "0.0")
-        self.costo.grid(row=3, column=1, pady=5, padx=5, sticky=tk.EW)
+        self.costo.grid(row=4, column=1, pady=5, padx=5, sticky=tk.EW)
         
-        ttk.Label(frame, text="Observaciones:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text="Observaciones:").grid(row=5, column=0, sticky=tk.W, pady=5)
         self.observaciones = tk.Text(frame, height=4, width=40)
-        self.observaciones.grid(row=4, column=1, pady=5, padx=5)
+        self.observaciones.grid(row=5, column=1, pady=5, padx=5)
         
         frame.columnconfigure(1, weight=1)
         return self.patente
@@ -633,9 +651,14 @@ class DialogMantenimiento(simpledialog.Dialog):
             return False
         
         try:
-            datetime.strptime(self.fecha.get(), "%Y-%m-%d")
+            fecha_inicio = datetime.strptime(self.fecha_inicio.get(), "%Y-%m-%d").date()
+            fecha_fin = datetime.strptime(self.fecha_fin.get(), "%Y-%m-%d").date()
+            
+            if fecha_fin < fecha_inicio:
+                messagebox.showerror("Validación", "La fecha de fin debe ser igual o posterior a la fecha de inicio")
+                return False
         except Exception:
-            messagebox.showerror("Validación", "Fecha inválida (usar formato YYYY-MM-DD)")
+            messagebox.showerror("Validación", "Fechas inválidas (usar formato YYYY-MM-DD)")
             return False
         
         try:
@@ -714,20 +737,43 @@ class DialogMantenimiento(simpledialog.Dialog):
         
         id_vehiculo = r["id_vehiculo"]
         tipo = self.tipo.get()
-        fecha = self.fecha.get()
+        fecha_inicio = self.fecha_inicio.get()
+        fecha_fin = self.fecha_fin.get()
         costo = float(self.costo.get())
         observaciones = self.observaciones.get("1.0", tk.END).strip()
         
+        # Verificar que no haya alquileres en el período de mantenimiento
+        from datetime import date as date_class
+        fecha_actual = date_class.today().strftime("%Y-%m-%d")
+        c.execute("""
+            SELECT COUNT(*) FROM alquiler 
+            WHERE id_vehiculo = ? 
+            AND NOT (date(fecha_fin) < date(?) OR date(fecha_inicio) > date(?))
+        """, (id_vehiculo, fecha_inicio, fecha_fin))
+        
+        alquileres_solapados = c.fetchone()[0]
+        if alquileres_solapados > 0:
+            messagebox.showerror("Validación", 
+                                f"No se puede programar mantenimiento en un vehículo que tiene alquileres en ese período. "
+                                f"El vehículo tiene {alquileres_solapados} alquiler(es) que se solapan con el mantenimiento.")
+            return
+        
         # Insertar mantenimiento
         c.execute(
-            "INSERT INTO mantenimiento (tipo, fecha, costo, id_vehiculo, observaciones) VALUES (?,?,?,?,?)",
-            (tipo, fecha, costo, id_vehiculo, observaciones if observaciones else None)
+            "INSERT INTO mantenimiento (tipo, fecha_inicio, fecha_fin, costo, id_vehiculo, observaciones) VALUES (?,?,?,?,?,?)",
+            (tipo, fecha_inicio, fecha_fin, costo, id_vehiculo, observaciones if observaciones else None)
         )
         
-        # Actualizar fecha último mantenimiento y estado del vehículo a "Mantenimiento"
-        # Programación Estructurada - Actualización de estado del vehículo
-        c.execute("UPDATE vehiculo SET fecha_ultimo_mantenimiento = ?, estado = 'Mantenimiento' WHERE id_vehiculo = ?", 
-                 (fecha, id_vehiculo))
+        # Verificar si el vehículo está en mantenimiento activo (fecha_fin >= fecha_actual)
+        # Si está en mantenimiento activo, actualizar estado a "Mantenimiento"
+        fecha_fin_date = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+        if fecha_fin_date >= date_class.today():
+            c.execute("UPDATE vehiculo SET fecha_ultimo_mantenimiento = ?, estado = 'Mantenimiento' WHERE id_vehiculo = ?", 
+                     (fecha_fin, id_vehiculo))
+        else:
+            # Si el mantenimiento ya terminó, solo actualizar fecha_ultimo_mantenimiento
+            c.execute("UPDATE vehiculo SET fecha_ultimo_mantenimiento = ? WHERE id_vehiculo = ?", 
+                     (fecha_fin, id_vehiculo))
         
         conn.commit()
         # No cerrar la conexión - el Singleton la maneja por thread
